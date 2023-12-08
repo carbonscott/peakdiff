@@ -177,7 +177,6 @@ class CXIPeakDiff:
             f.write(metrics_packed)
 
 
-    @staticmethod
     def load_metrics_from_msgpack(self, path_metrics):
         with open(path_metrics, 'rb') as f:
             data_packed = f.read()
