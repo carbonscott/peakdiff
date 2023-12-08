@@ -64,9 +64,9 @@ class CXIPeakDiff:
         common_events = list(set([event for event in n_peaks_0.keys()]) & set([event for event in n_peaks_1.keys()]))
 
         # Pre-process data and create Ray objects for each event
-        event_data_refs = []
+        event_data = []
         for event in common_events:
-            event_data_refs.append(
+            event_data.append(
                 {
                     "event"     : event,
                     "path_cxi_0": path_cxi_0,
@@ -127,7 +127,7 @@ class CXIPeakDiff:
             return results
 
         batch_size = num_cpus
-        batches = [ray.put(event_data_refs[i:i + batch_size]) for i in range(0, len(event_data_refs), batch_size)]
+        batches = [ray.put(event_data[i:i + batch_size]) for i in range(0, len(event_data), batch_size)]
 
         threshold_distance = self.threshold_distance
         results = [process_batch_of_events.remote(batch, threshold_distance) for batch in batches]
