@@ -63,7 +63,6 @@ class CXIPeakDiff:
 
         common_events = list(set([event for event in n_peaks_0.keys()]) & set([event for event in n_peaks_1.keys()]))
 
-        # Pre-process data and create Ray objects for each event
         event_data = []
         for event in common_events:
             event_data.append(
