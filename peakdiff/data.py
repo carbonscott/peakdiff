@@ -7,6 +7,7 @@ import os
 import sys
 import h5py
 import signal
+import msgpack
 import numpy as np
 
 from scipy.spatial.distance import cdist
@@ -25,9 +26,6 @@ class CXIPeakDiff:
         self.path_cxi_0 = path_cxi_0
         self.path_cxi_1 = path_cxi_1
 
-        self.min_n_peaks = 10
-        self.threshold_distance = 5
-
 
     def get_n_peaks(self, path_cxi):
         with h5py.File(path_cxi, 'r') as fh:
@@ -36,10 +34,11 @@ class CXIPeakDiff:
         return n_peaks
 
 
-    def compute_metrics(self, num_cpus, threshold_distance = 5, uses_ray_put = False):
+    def compute_metrics(self, num_cpus, min_n_peaks = 10, threshold_distance = 5, uses_ray_put = False):
         """
         Currently support single node.
         """
+        # Shutdown ray clients during a Ctrl+C event...
         def signal_handler(sig, frame):
             print('SIGINT (Ctrl+C) caught, shutting down Ray...')
             ray.shutdown()
@@ -47,21 +46,26 @@ class CXIPeakDiff:
 
         signal.signal(signal.SIGINT, signal_handler)
 
+        # Init ray...
         ray.init(num_cpus = num_cpus)
 
+        # Build a list of input event and metadata to process...
+        # ...Set path
         path_cxi_0 = self.path_cxi_0
         path_cxi_1 = self.path_cxi_1
 
-        min_n_peaks = self.min_n_peaks
-
+        # ...Fetch num of peaks
         n_peaks_0 = self.get_n_peaks(path_cxi_0)
         n_peaks_1 = self.get_n_peaks(path_cxi_1)
 
+        # ...Keep events that has min number of peaks
         n_peaks_0 = { enum_idx : n for enum_idx, n in enumerate(n_peaks_0) if n >= min_n_peaks }
         n_peaks_1 = { enum_idx : n for enum_idx, n in enumerate(n_peaks_1) if n >= min_n_peaks }
 
+        # ...Find common events
         common_events = list(set([event for event in n_peaks_0.keys()]) & set([event for event in n_peaks_1.keys()]))
 
+        # ...Build a list of input event and metadata
         event_data = []
         for event in common_events:
             event_data.append(
@@ -74,6 +78,7 @@ class CXIPeakDiff:
                 }
             )
 
+        # Create the procedure of processing one event...
         def process_event(event_data, threshold_distance = 5):
             event      = event_data["event"]
             path_cxi_0 = event_data["path_cxi_0"]
@@ -116,6 +121,7 @@ class CXIPeakDiff:
                 "n_peaks_1"    : len(peaks_1),
             }
 
+        # Create the procedure of processing a list of events...
         @ray.remote
         def process_batch_of_events(event_data_list, threshold_distance):
             results = []
@@ -124,21 +130,25 @@ class CXIPeakDiff:
                 results.append(result)
             return results
 
+        # Chunking the input by grouping events...
         batch_size = num_cpus
         batches = [event_data[i:i + batch_size] for i in range(0, len(event_data), batch_size)]
 
+        # Optional ray put for saving memory???
         if uses_ray_put:
             batches = [ray.put(batch) for batch in batches]
 
-        threshold_distance = self.threshold_distance
+        # Register the computation at remote nodes...
         results = [process_batch_of_events.remote(batch, threshold_distance) for batch in batches]
 
+        # Compute...
+        results = ray.get(results)
+
+        # Collect results...
         match_rate_0 = {}
         match_rate_1 = {}
         n_peaks_0    = {}
         n_peaks_1    = {}
-
-        results = ray.get(results)
         for batch_result in results:
             for result_dict in batch_result:
                 event = result_dict["event"]
@@ -148,6 +158,7 @@ class CXIPeakDiff:
                 n_peaks_0   [event] = result_dict["n_peaks_0"   ]
                 n_peaks_1   [event] = result_dict["n_peaks_1"   ]
 
+        # Shutdown ray...
         ray.shutdown()
 
         return {
@@ -156,6 +167,21 @@ class CXIPeakDiff:
             "n_peaks_0"    : n_peaks_0,
             "n_peaks_1"    : n_peaks_1,
         }
+
+
+    def save_metrics_as_msgpack(self, path_metrics, metrics):
+        metrics_packed = msgpack.packb(metrics)
+        with open(path_metrics, 'wb') as f:
+            f.write(metrics_packed)
+
+
+    @staticmethod
+    def load_metrics_from_msgpack(self, path_metrics):
+        with open(path_metrics, 'rb') as f:
+            data_packed = f.read()
+            data = msgpack.unpackb(data_packed, strict_map_key = False)
+
+        return data
 
 
 
