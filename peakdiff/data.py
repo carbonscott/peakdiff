@@ -43,9 +43,8 @@ class CXIPeakDiff:
         def signal_handler(sig, frame):
             print('SIGINT (Ctrl+C) caught, shutting down Ray...')
             ray.shutdown()
-            sys.exit(0)  # Exit the program
+            sys.exit(0)
 
-        # Register the signal handler
         signal.signal(signal.SIGINT, signal_handler)
 
         ray.init(num_cpus = num_cpus)
