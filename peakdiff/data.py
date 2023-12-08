@@ -58,7 +58,7 @@ class CXIPeakDiff:
         n_peaks_0 = self.get_n_peaks(path_cxi_0)
         n_peaks_1 = self.get_n_peaks(path_cxi_1)
 
-        # ...Keep events that has min number of peaks
+        # ...Keep events having no less than min number of peaks
         n_peaks_0 = { enum_idx : n for enum_idx, n in enumerate(n_peaks_0) if n >= min_n_peaks }
         n_peaks_1 = { enum_idx : n for enum_idx, n in enumerate(n_peaks_1) if n >= min_n_peaks }
 
@@ -80,12 +80,14 @@ class CXIPeakDiff:
 
         # Create the procedure of processing one event...
         def process_event(event_data, threshold_distance = 5):
+            # Unpack input...
             event      = event_data["event"]
             path_cxi_0 = event_data["path_cxi_0"]
             path_cxi_1 = event_data["path_cxi_1"]
             n_peaks_0  = event_data["n_peaks_0"]
             n_peaks_1  = event_data["n_peaks_1"]
 
+            # Fetch coordinates...
             with h5py.File(path_cxi_0, "r") as fh:
                 peaks_y_0 = fh.get('entry_1/result_1/peakYPosRawAll')[event][:n_peaks_0]
                 peaks_x_0 = fh.get('entry_1/result_1/peakXPosRawAll')[event][:n_peaks_0]
@@ -94,23 +96,23 @@ class CXIPeakDiff:
                 peaks_y_1 = fh.get('entry_1/result_1/peakYPosRawAll')[event][:n_peaks_1]
                 peaks_x_1 = fh.get('entry_1/result_1/peakXPosRawAll')[event][:n_peaks_1]
 
+            # Format into [(y0, x0), (y1, x1), ..., (y_n, x_n)]...
             peaks_0 = [ (y, x) for y, x in zip(peaks_y_0, peaks_x_0) ]
             peaks_1 = [ (y, x) for y, x in zip(peaks_y_1, peaks_x_1) ]
 
-            # Assume coords_0 and coords_1 are your two lists of coordinates
-            coords_0 = np.array(peaks_0)
-            coords_1 = np.array(peaks_1)
-
-            # Compute a cost matrix.
+            # Compute a cost matrix...
+            coords_0    = np.array(peaks_0)
+            coords_1    = np.array(peaks_1)
             cost_matrix = cdist(coords_0, coords_1)
 
-            # Use linear_sum_assignment to find the optimal assignment.
+            # Use linear_sum_assignment to find the optimal assignment...
             row_ind, col_ind = linear_sum_assignment(cost_matrix)
 
-            # Filter assignments based on some threshold distance.
+            # Filter assignments based on some threshold distance...
             close_pairs = [(i, j) for i, j in zip(row_ind, col_ind) if cost_matrix[i, j] <= threshold_distance]
 
-            match_rate_0  = len(close_pairs) / len(peaks_0)
+            # Calculate match rate...
+            match_rate_0 = len(close_pairs) / len(peaks_0)
             match_rate_1 = len(close_pairs) / len(peaks_1)
 
             return {
