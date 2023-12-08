@@ -36,7 +36,7 @@ class CXIPeakDiff:
         return n_peaks
 
 
-    def compute_metrics(self, num_cpus, threshold_distance = 5):
+    def compute_metrics(self, num_cpus, threshold_distance = 5, uses_ray_put = False):
         """
         Currently support single node.
         """
@@ -125,7 +125,10 @@ class CXIPeakDiff:
             return results
 
         batch_size = num_cpus
-        batches = [ray.put(event_data[i:i + batch_size]) for i in range(0, len(event_data), batch_size)]
+        batches = [event_data[i:i + batch_size] for i in range(0, len(event_data), batch_size)]
+
+        if uses_ray_put:
+            batches = [ray.put(batch) for batch in batches]
 
         threshold_distance = self.threshold_distance
         results = [process_batch_of_events.remote(batch, threshold_distance) for batch in batches]
