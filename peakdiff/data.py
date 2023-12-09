@@ -37,6 +37,42 @@ class CXIPeakDiff:
         return n_peaks
 
 
+    def get_img_and_peaks_by_event(self, event):
+        path_cxi_0 = self.path_cxi_0
+        path_cxi_1 = self.path_cxi_1
+
+        ## # ...Fetch num of peaks
+        ## n_peaks_0 = self.get_n_peaks(path_cxi_0)
+        ## n_peaks_1 = self.get_n_peaks(path_cxi_1)
+
+        ## with h5py.File(path_cxi_0, 'r') as fh:
+        ##     n_peaks_0 = fh.get('entry_1/result_1/nPeaksAll')[:]
+
+        with h5py.File(path_cxi_1, 'r') as fh:
+            n_peaks_1 = fh.get('entry_1/result_1/nPeaks')[:]
+
+        ## # Fetch coordinates...
+        ## with h5py.File(path_cxi_0, "r") as fh:
+        ##     peaks_y_0 = fh.get('entry_1/result_1/peakYPosRawAll')[event][:n_peaks_0[event]]
+        ##     peaks_x_0 = fh.get('entry_1/result_1/peakXPosRawAll')[event][:n_peaks_0[event]]
+
+
+        with h5py.File(path_cxi_1, "r") as fh:
+            peaks_y_1 = fh.get('entry_1/result_1/peakYPosRaw')[event][:n_peaks_1[event]]
+            peaks_x_1 = fh.get('entry_1/result_1/peakXPosRaw')[event][:n_peaks_1[event]]
+
+            img = fh.get('entry_1/data_1/data')[event]
+
+        ## peaks_0 = [peaks_y_0, peaks_x_0]
+        peaks_1 = [peaks_y_1, peaks_x_1]
+
+        return {
+            "image" : img,
+            ## "peaks_0" : peaks_0,
+            "peaks_1" : peaks_1,
+        }
+
+
     def compute_metrics(self, num_cpus, min_n_peaks = 10, threshold_distance = 5, uses_ray_put = False):
         """
         Currently support single node.
