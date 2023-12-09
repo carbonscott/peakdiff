@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from bokeh.models import ColumnDataSource
-
 import os
 import sys
 import h5py
 import signal
 import msgpack
 import numpy as np
+import hashlib
 
+from tqdm import tqdm
 from scipy.spatial.distance import cdist
-from scipy.optimize import linear_sum_assignment
+from scipy.optimize         import linear_sum_assignment
 
 import ray
 
@@ -20,11 +20,14 @@ class CXIPeakDiff:
     """
     Perform peakdiff on two cxi files.
     """
-    def __init__(self, path_cxi_0, path_cxi_1):
+    def __init__(self, path_cxi_0, path_cxi_1, dir_output = None):
         super().__init__()
 
         self.path_cxi_0 = path_cxi_0
         self.path_cxi_1 = path_cxi_1
+        self.dir_output = 'peakdiff_results' if dir_output is None else dir_output
+
+        os.makedirs(self.dir_output, exist_ok=True)
 
 
     def get_n_peaks(self, path_cxi):
@@ -185,55 +188,53 @@ class CXIPeakDiff:
         return data
 
 
+    def build_bokeh_data_source(self, path_metrics = None, num_cpus = 20):
+        # Generate a unique path???
+        if path_metrics is None:
+            # Set path...
+            path_cxi_0 = self.path_cxi_0
+            path_cxi_1 = self.path_cxi_1
 
+            # Generate a unique id...
+            unique_identifier = f"{path_cxi_0}.{path_cxi_1}"
+            hashed_identifier = hashlib.sha256(unique_identifier.encode()).hexdigest()
 
-class DataSource:
+            # Assign the new path to metrics...
+            path_metrics = os.path.join(self.dir_output, f"cache_{hashed_identifier}.msgpack")
 
-    def __init__(self, config = None):
+        # Check if cache is available???
+        if not os.path.exists(path_metrics):
+            # Compute the metrics...
+            metrics = self.compute_metrics(num_cpus = num_cpus)
 
-        self.path_n_peaks_A = config.path_n_peaks_A
-        self.path_m_rates_A = config.path_m_rates_A
-        self.path_n_peaks_B = config.path_n_peaks_B
-        self.path_m_rates_B = config.path_m_rates_B
+            # Save them...
+            self.save_metrics_as_msgpack(path_metrics, metrics)
 
-        # Read the data to visualize...
-        n_peaks_dict = {}
-        m_rates_dict = {}
-        with open(config.path_n_peaks_A, 'rb') as f:
-            data = f.read()
-            n_peaks_dict['peaknet'] = msgpack.unpackb(data, strict_map_key = False)
+        else:
+            # Load it from cache...
+            metrics = self.load_metrics_from_msgpack(path_metrics)
 
-        with open(config.path_n_peaks_B, 'rb') as f:
-            data = f.read()
-            n_peaks_dict['pyalgo'] = msgpack.unpackb(data, strict_map_key = False)
-
-        with open(config.path_m_rates_A, 'rb') as f:
-            data = f.read()
-            m_rates_dict['peaknet'] = msgpack.unpackb(data, strict_map_key = False)
-
-        with open(config.path_m_rates_B, 'rb') as f:
-            data = f.read()
-            m_rates_dict['pyalgo'] = msgpack.unpackb(data, strict_map_key = False)
-
-        # Build the data source (it's pandas dataframe under the hood)...
+        # Build bokeh data source...
+        file_cxi_0   = os.path.basename(path_cxi_0)
+        file_cxi_1   = os.path.basename(path_cxi_1)
+        match_rate_0 = metrics["match_rate_0"]
+        match_rate_1 = metrics["match_rate_1"]
+        n_peaks_0    = metrics["n_peaks_0"   ]
+        n_peaks_1    = metrics["n_peaks_1"   ]
         data_source = dict(
-            events    = list(n_peaks_dict['peaknet'].keys()),
-            n_peaks_x = list(n_peaks_dict['pyalgo'].values()),
-            n_peaks_y = list(n_peaks_dict['peaknet'].values()),
-            n_peaks_l = [f"event {event:06d}, pyalgo:{m_pyalgo:.2f}, peaknet:{m_peaknet:.2f}"
-                         for event, m_pyalgo, m_peaknet in zip(n_peaks_dict['pyalgo' ].keys(),
-                                                               n_peaks_dict['pyalgo' ].values(),
-                                                               n_peaks_dict['peaknet'].values())],
-            m_rates_x = list(m_rates_dict['pyalgo'].values()),
-            m_rates_y = list(m_rates_dict['peaknet'].values()),
-            m_rates_l = [f"event {event:06d}, pyalgo:{m_pyalgo:.2f}, peaknet:{m_peaknet:.2f}"
-                         for event, m_pyalgo, m_peaknet in zip(m_rates_dict['pyalgo' ].keys(),
-                                                               m_rates_dict['pyalgo' ].values(),
-                                                               m_rates_dict['peaknet'].values())],
+            events = list(n_peaks_0.keys()),
+            n_peaks_x = list(n_peaks_0.values()),
+            n_peaks_y = list(n_peaks_1.values()),
+            n_peaks_l = [f"event {event:06d}, {file_cxi_0}:{m_0:.2f}, {file_cxi_1}:{m_1:.2f}"
+                         for event, m_0, m_1 in zip(n_peaks_0.keys(),
+                                                    n_peaks_0.values(),
+                                                    n_peaks_1.values())],
+            match_rates_x = list(match_rate_0.values()),
+            match_rates_y = list(match_rate_1.values()),
+            match_rates_l = [f"event {event:06d}, {file_cxi_0}:{m_0:.2f}, {file_cxi_1}:{m_1:.2f}"
+                            for event, m_0, m_1 in zip(match_rate_0.keys(),
+                                                       match_rate_0.values(),
+                                                       match_rate_1.values())],
         )
 
-        self.data_source = ColumnDataSource(data_source)
-
-
-    def init_config(self):
-        return self.data_source
+        return data_source
