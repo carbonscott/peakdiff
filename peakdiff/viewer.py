@@ -170,7 +170,8 @@ class CXIPeakDiffViewer:
                 '$x': 'printf',
                 '$y': 'printf',
                 '@v': 'printf'
-            })
+            },
+            renderers = [self.image_glyph])
         fig.add_tools(hover_tool)
 
         scatter_plot_data_source = self.scatter_plot_data_source
