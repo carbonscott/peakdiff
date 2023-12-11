@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from bokeh.models         import ColumnDataSource, Circle, Div, CustomJS, Span, HoverTool, PolyDrawTool
+from bokeh.models         import ColumnDataSource, Circle, Div, CustomJS, Span, HoverTool, PolyDrawTool, DataTable, TableColumn, Button
 from bokeh.plotting       import figure, show
 from bokeh.layouts        import gridplot, row, column
 from bokeh.io             import curdoc
@@ -42,14 +42,16 @@ class CXIPeakDiffViewer:
                              title        = "Number of peaks comparison",
                              x_axis_label = 'pyalgo',
                              y_axis_label = 'peaknet',
-                             match_aspect = True),
+                             match_aspect = True,
+                             active_scroll="wheel_zoom"),
             match_rates = figure(width        =  fig_width,
                                  height       =  fig_height,
                                  tools        =  TOOLS,
                                  title        = "Match rate comparison",
                                  x_axis_label = 'pyalgo',
                                  y_axis_label = 'peaknet',
-                                 match_aspect = True),
+                                 match_aspect = True,
+                                 active_scroll="wheel_zoom"),
         )
 
         scatter_n_peaks = fig['n_peaks'].scatter('n_peaks_x',
@@ -73,8 +75,29 @@ class CXIPeakDiffViewer:
 
         self.fig = fig
 
+        scatter_plot_data_source.selected.on_change('indices', self.update_indices_panel)
 
-    ## def update_image_panel(self, img, peaks_0, peaks_1):
+
+    def update_indices_panel(self, attr, old, new):
+        selected_indices = self.scatter_plot_data_source.selected.indices
+        self.selected_indices_data_source.data = {'indices': selected_indices}
+
+        # Clear the image panel if no indices are selected
+        if not selected_indices:
+            self.clear_image_panel()
+
+
+    def clear_image_panel(self):
+        self.img_data_source.data = {'x': [], 'y': [], 'dw': [], 'dh': [], 'f': []}
+
+        self.rect_peak_data_source_1.data = dict(
+            x      = [],
+            y      = [],
+            width  = [],
+            height = [],
+        )
+
+
     def update_image_panel(self, img, peaks_1):
         # Create ColumnDataSource
         H, W = img.shape
@@ -95,15 +118,6 @@ class CXIPeakDiffViewer:
 
         offset = 3
 
-        ## # Prepare rectangle data for peaks
-        ## y, x = peaks_1
-        ## self.rect_peak_data_source_0.data = data=dict(
-        ##     x      = x,
-        ##     y      = y,
-        ##     width  = [2*offset] * len(x),
-        ##     height = [2*offset] * len(y),
-        ## )
-
         y, x = peaks_1
         self.rect_peak_data_source_1.data = data=dict(
             x      = x,
@@ -121,7 +135,8 @@ class CXIPeakDiffViewer:
                      height       =  int(fig_height),
                      y_range      =  (0, fig_height),
                      x_range      =  (0, fig_width),
-                     match_aspect = True)
+                     match_aspect = True,
+                     active_scroll="wheel_zoom")
 
         self.img_data_source = ColumnDataSource(data=dict(
             x  = [],
@@ -133,27 +148,12 @@ class CXIPeakDiffViewer:
         color_mapper = LogColorMapper(palette="Viridis256")
         self.image_glyph = fig.image(source = self.img_data_source, image = 'f', x = 'x', y = 'y', dw = 'dw', dh = 'dh', color_mapper=color_mapper)
 
-
-        ## self.rect_peak_data_source_0 = ColumnDataSource(data=dict(
-        ##     x      = [],
-        ##     y      = [],
-        ##     width  = [],
-        ##     height = [],
-        ## ))
         self.rect_peak_data_source_1 = ColumnDataSource(data=dict(
             x      = [],
             y      = [],
             width  = [],
             height = [],
         ))
-        ## fig.rect(source     =  self.rect_peak_data_source_0,
-        ##          x          =  'x',
-        ##          y          =  'y',
-        ##          width      =  'width',
-        ##          height     =  'height',
-        ##          line_width = 1.0,
-        ##          line_color = 'yellow',
-        ##          fill_color = None)
         fig.rect(source     =  self.rect_peak_data_source_1,
                  x          =  'x',
                  y          =  'y',
@@ -183,10 +183,8 @@ class CXIPeakDiffViewer:
 
                 img_and_peaks_dict = cxi_peakdiff.get_img_and_peaks_by_event(event)
                 img     = img_and_peaks_dict["image"]
-                ## peaks_0 = img_and_peaks_dict["peaks_0"]
                 peaks_1 = img_and_peaks_dict["peaks_1"]
 
-                ## self.update_image_panel(img, peaks_0, peaks_1)
                 self.update_image_panel(img, peaks_1)
 
         scatter_plot_data_source.selected.on_change('indices', load_selected)
@@ -202,24 +200,36 @@ class CXIPeakDiffViewer:
 
         scatter_plot_data_source = self.scatter_plot_data_source
 
-        # [[[ CONTENT -- SELECTED INDICES ]]]
-        # CustomJS callback to update Div on selection
-        selected_indices_div = Div(width  = 2 * fig_width,
-                                   height = title_height,
-                                   text   = "")
-        callback = CustomJS(args=dict(source=scatter_plot_data_source, div=selected_indices_div, title_height=title_height), code="""
-            const inds = source.selected.indices;
-            let text = "<div style='height:" + title_height + "px; overflow-y: scroll;'>";  // Ensure this div has a set height and overflow-y property
-            for (let i = 0; i < inds.length; i++) {
-                text += inds[i] + "\\n";
-            }
-            text += "</div>";
-            div.text = text;
-        """)
+        # Create a data source for the DataTable
+        self.selected_indices_data_source = ColumnDataSource(data={'indices': []})
 
-        scatter_plot_data_source.selected.js_on_change('indices', callback)
+        # Define columns for the DataTable
+        columns = [TableColumn(field="indices", title="Selected Indices")]
 
-        self.selected_indices_div = selected_indices_div
+        # Create the DataTable
+        self.selected_indices_table = DataTable(source=self.selected_indices_data_source,
+                                                columns=columns,
+                                                width=2 * fig_width,
+                                                height=title_height,
+                                                selectable=True,
+                                                header_row=False)
+
+        self.selected_indices_table.source.selected.on_change('indices', self.on_table_select)
+
+
+    def on_table_select(self, attr, old, new):
+        if new:
+            selected_index = self.selected_indices_data_source.data['indices'][new[0]]
+            self.load_selected_event_by_index(selected_index)
+        else:
+            self.clear_image_panel()
+
+
+    def load_selected_event_by_index(self, index):
+        img_and_peaks_dict = self.cxi_peakdiff.get_img_and_peaks_by_event(index)
+        img = img_and_peaks_dict["image"]
+        peaks_1 = img_and_peaks_dict["peaks_1"]
+        self.update_image_panel(img, peaks_1)
 
 
     def init_section_title_panel(self):
@@ -296,13 +306,15 @@ class CXIPeakDiffViewer:
     def init_layout(self):
         fig                  = self.fig
         selected_event_div   = self.selected_event_div
-        selected_indices_div = self.selected_indices_div
+        ## selected_indices_div = self.selected_indices_div
+        selected_indices_table = self.selected_indices_table
         section_div          = self.section_div
 
         layout = {}
-        layout['scatter_plot'    ] = row(section_div['scatter_plot']    , gridplot([[fig['n_peaks'], fig['match_rates']]]))
+        layout['scatter_plot'    ] = row(section_div['scatter_plot']    , gridplot([[fig['n_peaks'], fig['match_rates']]], toolbar_location = 'right'))
         layout['selected_event'  ] = row(section_div['selected_event']  , selected_event_div)
-        layout['selected_indices'] = row(section_div['selected_indices'], selected_indices_div)
+        ## layout['selected_indices'] = row(section_div['selected_indices'], selected_indices_div)
+        layout['selected_indices'] = row(section_div['selected_indices'], selected_indices_table)
 
         final_layout = column(layout['scatter_plot'], layout['selected_event'], layout['selected_indices'])
 
