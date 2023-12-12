@@ -44,14 +44,14 @@ class CXIPeakDiffViewer:
                              y_axis_label = 'peaknet',
                              match_aspect = True,
                              active_scroll="wheel_zoom"),
-            match_rates = figure(width        =  fig_width,
-                                 height       =  fig_height,
-                                 tools        =  TOOLS,
-                                 title        = "Match rate comparison",
-                                 x_axis_label = 'pyalgo',
-                                 y_axis_label = 'peaknet',
-                                 match_aspect = True,
-                                 active_scroll="wheel_zoom"),
+            m_rates = figure(width        =  fig_width,
+                             height       =  fig_height,
+                             tools        =  TOOLS,
+                             title        = "Match rate comparison",
+                             x_axis_label = 'pyalgo',
+                             y_axis_label = 'peaknet',
+                             match_aspect = True,
+                             active_scroll="wheel_zoom"),
         )
 
         scatter_n_peaks = fig['n_peaks'].scatter('n_peaks_x',
@@ -63,15 +63,15 @@ class CXIPeakDiffViewer:
                                                  fill_alpha              = 0.5,
                                                  nonselection_fill_alpha = 0.005,
                                                  nonselection_fill_color = "blue")
-        scatter_match_rates = fig['match_rates'].scatter('match_rates_x',
-                                                         'match_rates_y',
-                                                         source                  = scatter_plot_data_source,
-                                                         size                    = 10,
-                                                         fill_color              = "red",
-                                                         line_color              =  None,
-                                                         fill_alpha              = 0.5,
-                                                         nonselection_fill_alpha = 0.005,
-                                                         nonselection_fill_color = "red")
+        scatter_m_rates = fig['m_rates'].scatter('m_rates_x',
+                                                 'm_rates_y',
+                                                 source                  = scatter_plot_data_source,
+                                                 size                    = 10,
+                                                 fill_color              = "red",
+                                                 line_color              =  None,
+                                                 fill_alpha              = 0.5,
+                                                 nonselection_fill_alpha = 0.005,
+                                                 nonselection_fill_color = "red")
 
         self.fig = fig
 
@@ -90,6 +90,12 @@ class CXIPeakDiffViewer:
     def clear_image_panel(self):
         self.img_data_source.data = {'x': [], 'y': [], 'dw': [], 'dh': [], 'f': []}
 
+        self.rect_peak_data_source_0.data = dict(
+            x      = [],
+            y      = [],
+            width  = [],
+            height = [],
+        )
         self.rect_peak_data_source_1.data = dict(
             x      = [],
             y      = [],
@@ -98,7 +104,19 @@ class CXIPeakDiffViewer:
         )
 
 
-    def update_image_panel(self, img, peaks_1):
+    def update_peaks_in_image_panel(self, peaks):
+        offset = 3
+        y, x = peaks
+
+        return dict(
+            peak = dict( x      = x,
+                         y      = y,
+                         width  = [2*offset] * len(x),
+                         height = [2*offset] * len(y),),
+        )
+
+
+    def update_image_in_image_panel(self, img):
         # Create ColumnDataSource
         H, W = img.shape
 
@@ -108,23 +126,48 @@ class CXIPeakDiffViewer:
 
         self.image_glyph.glyph.color_mapper = color_mapper
 
-        self.img_data_source.data = data=dict(
-            x  = [0],
-            y  = [0],
-            dw = [W],
-            dh = [H],
-            f  = [img],
+        return dict(
+            color_mapper = color_mapper,
+            img  = dict( x  = [0],
+                         y  = [0],
+                         dw = [W],
+                         dh = [H],
+                         f  = [img],),
         )
 
-        offset = 3
 
-        y, x = peaks_1
-        self.rect_peak_data_source_1.data = data=dict(
-            x      = x,
-            y      = y,
-            width  = [2*offset] * len(x),
-            height = [2*offset] * len(y),
-        )
+    ## def update_image_panel(self, img, peaks):
+    ##     # Create ColumnDataSource
+    ##     H, W = img.shape
+
+    ##     vmin = img.mean()
+    ##     vmax = img.mean() + 6 * img.std()
+    ##     color_mapper = LogColorMapper(palette="Viridis256", low=vmin, high=vmax)
+
+    ##     self.image_glyph.glyph.color_mapper = color_mapper
+
+    ##     offset = 3
+    ##     y, x = peaks
+
+    ##     return dict(
+    ##         color_mapper = color_mapper,
+    ##         img  = dict( x  = [0],
+    ##                      y  = [0],
+    ##                      dw = [W],
+    ##                      dh = [H],
+    ##                      f  = [img],),
+    ##         peak = dict( x      = x,
+    ##                      y      = y,
+    ##                      width  = [2*offset] * len(x),
+    ##                      height = [2*offset] * len(y),),
+    ##     )
+    ##     ## y, x = peaks_1
+    ##     ## self.rect_peak_data_source_1.data = data=dict(
+    ##     ##     x      = x,
+    ##     ##     y      = y,
+    ##     ##     width  = [2*offset] * len(x),
+    ##     ##     height = [2*offset] * len(y),
+    ##     ## )
 
 
     def init_image_panel(self):
@@ -147,6 +190,21 @@ class CXIPeakDiffViewer:
         ))
         color_mapper = LogColorMapper(palette="Viridis256")
         self.image_glyph = fig.image(source = self.img_data_source, image = 'f', x = 'x', y = 'y', dw = 'dw', dh = 'dh', color_mapper=color_mapper)
+
+        self.rect_peak_data_source_0 = ColumnDataSource(data=dict(
+            x      = [],
+            y      = [],
+            width  = [],
+            height = [],
+        ))
+        fig.rect(source     =  self.rect_peak_data_source_0,
+                 x          =  'x',
+                 y          =  'y',
+                 width      =  'width',
+                 height     =  'height',
+                 line_width = 1.0,
+                 line_color = 'yellow',
+                 fill_color = None)
 
         self.rect_peak_data_source_1 = ColumnDataSource(data=dict(
             x      = [],
@@ -182,10 +240,14 @@ class CXIPeakDiffViewer:
                 event = new[0]
 
                 img_and_peaks_dict = cxi_peakdiff.get_img_and_peaks_by_event(event)
-                img     = img_and_peaks_dict["image"]
+                img_0   = img_and_peaks_dict["image"]
+                peaks_0 = img_and_peaks_dict["peaks_0"]
+
+                img_and_peaks_dict = cxi_peakdiff.get_img_and_peaks_by_event(event)
+                img_1   = img_and_peaks_dict["image"]
                 peaks_1 = img_and_peaks_dict["peaks_1"]
 
-                self.update_image_panel(img, peaks_1)
+                self.update_image_panel(img, peaks_0, peaks_1)
 
         scatter_plot_data_source.selected.on_change('indices', load_selected)
 
@@ -226,9 +288,9 @@ class CXIPeakDiffViewer:
 
 
     def load_selected_event_by_index(self, index):
-        img_and_peaks_dict = self.cxi_peakdiff.get_img_and_peaks_by_event(index)
-        img = img_and_peaks_dict["image"]
-        peaks_1 = img_and_peaks_dict["peaks_1"]
+        img_and_peaks_dict_1 = self.cxi_peakdiff.get_img_and_peaks_by_event(index)
+        img_1 = img_and_peaks_dict_1["image"]
+        peaks_1 = img_and_peaks_dict_1["peaks_1"]
         self.update_image_panel(img, peaks_1)
 
 
@@ -306,14 +368,12 @@ class CXIPeakDiffViewer:
     def init_layout(self):
         fig                  = self.fig
         selected_event_div   = self.selected_event_div
-        ## selected_indices_div = self.selected_indices_div
         selected_indices_table = self.selected_indices_table
         section_div          = self.section_div
 
         layout = {}
-        layout['scatter_plot'    ] = row(section_div['scatter_plot']    , gridplot([[fig['n_peaks'], fig['match_rates']]], toolbar_location = 'right'))
+        layout['scatter_plot'    ] = row(section_div['scatter_plot']    , gridplot([[fig['n_peaks'], fig['m_rates']]], toolbar_location = 'right'))
         layout['selected_event'  ] = row(section_div['selected_event']  , selected_event_div)
-        ## layout['selected_indices'] = row(section_div['selected_indices'], selected_indices_div)
         layout['selected_indices'] = row(section_div['selected_indices'], selected_indices_table)
 
         final_layout = column(layout['scatter_plot'], layout['selected_event'], layout['selected_indices'])
