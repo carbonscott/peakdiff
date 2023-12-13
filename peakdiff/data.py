@@ -21,12 +21,13 @@ import ray
 
 @dataclass
 class CXIKeyConfig:
-    num_peaks: Optional[str] = "/entry_1/result_1/nPeaks",
-    peak_y   : Optional[str] = "/entry_1/result_1/peakYPosRaw",
-    peak_x   : Optional[str] = "/entry_1/result_1/peakXPosRaw",
-    data     : Optional[str] = "/entry_1/data_1/data",
-    mask     : Optional[str] = "/entry_1/data_1/mask",
-    segmask  : Optional[str] = "/entry_1/data_1/segmask",
+    num_peaks  : Optional[str] = "/entry_1/result_1/nPeaks",
+    peak_event : Optional[str] = "/entry_1/result_1/peakEvent",
+    peak_y     : Optional[str] = "/entry_1/result_1/peakYPosRaw",
+    peak_x     : Optional[str] = "/entry_1/result_1/peakXPosRaw",
+    data       : Optional[str] = "/entry_1/data_1/data",
+    mask       : Optional[str] = "/entry_1/data_1/mask",
+    segmask    : Optional[str] = "/entry_1/data_1/segmask",
 
 
 @dataclass
@@ -42,6 +43,8 @@ class CXIManager:
         self.key        = config.key
         self.peakfinder = config.peakfinder
 
+        self._event_to_seqi = None
+
 
     def get_n_peaks(self):
         path_cxi = self.path_cxi
@@ -56,8 +59,21 @@ class CXIManager:
     def get_img_by_event(self, event):
         path_cxi = self.path_cxi
         key_data = self.key.data
+
+        img = None
+        if self._event_to_seqi is None:
+            key_num_peaks = self.key.num_peaks
+            with h5py.File(self.path_cxi, "r") as fh:
+                if key_num_peaks in fh:
+                    num_peaks = fh.get(self.key.num_peaks)[:]
+                    self._event_to_seqi = { event : seqi for seqi, event in enumerate(np.where(num_peaks > -1)[0]) }
+
+        seqi = self._event_to_seqi[event]
         with h5py.File(path_cxi, "r") as fh:
-            img = fh.get(key_data)[event]
+            if key_data in fh:
+                img_dataset = fh.get(key_data)
+                if seqi < len(img_dataset):
+                    img = img_dataset[seqi]
 
         return img
 
