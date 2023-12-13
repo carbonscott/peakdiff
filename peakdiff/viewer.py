@@ -104,19 +104,7 @@ class CXIPeakDiffViewer:
         )
 
 
-    def update_peaks_in_image_panel(self, peaks):
-        offset = 3
-        y, x = peaks
-
-        return dict(
-            peak = dict( x      = x,
-                         y      = y,
-                         width  = [2*offset] * len(x),
-                         height = [2*offset] * len(y),),
-        )
-
-
-    def update_image_in_image_panel(self, img):
+    def update_image_panel(self, img, peaks_0, peaks_1):
         # Create ColumnDataSource
         H, W = img.shape
 
@@ -126,48 +114,29 @@ class CXIPeakDiffViewer:
 
         self.image_glyph.glyph.color_mapper = color_mapper
 
-        return dict(
-            color_mapper = color_mapper,
-            img  = dict( x  = [0],
-                         y  = [0],
-                         dw = [W],
-                         dh = [H],
-                         f  = [img],),
+        self.img_data_source.data = data=dict(
+            x  = [0],
+            y  = [0],
+            dw = [W],
+            dh = [H],
+            f  = [img],
         )
 
-
-    ## def update_image_panel(self, img, peaks):
-    ##     # Create ColumnDataSource
-    ##     H, W = img.shape
-
-    ##     vmin = img.mean()
-    ##     vmax = img.mean() + 6 * img.std()
-    ##     color_mapper = LogColorMapper(palette="Viridis256", low=vmin, high=vmax)
-
-    ##     self.image_glyph.glyph.color_mapper = color_mapper
-
-    ##     offset = 3
-    ##     y, x = peaks
-
-    ##     return dict(
-    ##         color_mapper = color_mapper,
-    ##         img  = dict( x  = [0],
-    ##                      y  = [0],
-    ##                      dw = [W],
-    ##                      dh = [H],
-    ##                      f  = [img],),
-    ##         peak = dict( x      = x,
-    ##                      y      = y,
-    ##                      width  = [2*offset] * len(x),
-    ##                      height = [2*offset] * len(y),),
-    ##     )
-    ##     ## y, x = peaks_1
-    ##     ## self.rect_peak_data_source_1.data = data=dict(
-    ##     ##     x      = x,
-    ##     ##     y      = y,
-    ##     ##     width  = [2*offset] * len(x),
-    ##     ##     height = [2*offset] * len(y),
-    ##     ## )
+        offset = 3
+        y, x = peaks_0
+        self.rect_peak_data_source_0.data = data=dict(
+            x      = x,
+            y      = y,
+            width  = [2*offset] * len(x),
+            height = [2*offset] * len(y),
+        )
+        y, x = peaks_1
+        self.rect_peak_data_source_1.data = data=dict(
+            x      = x,
+            y      = y,
+            width  = [2*offset] * len(x),
+            height = [2*offset] * len(y),
+        )
 
 
     def init_image_panel(self):
@@ -239,13 +208,13 @@ class CXIPeakDiffViewer:
             if len(new) == 1:
                 event = new[0]
 
-                img_and_peaks_dict = cxi_peakdiff.get_img_and_peaks_by_event(event)
-                img_0   = img_and_peaks_dict["image"]
-                peaks_0 = img_and_peaks_dict["peaks_0"]
+                # Uses cxi_0 images???
+                img = cxi_peakdiff.cxi_manager_0.get_img_by_event(event) \
+                      if cxi_peakdiff.uses_cxi_0_img else                \
+                      cxi_peakdiff.cxi_manager_1.get_img_by_event(event)
 
-                img_and_peaks_dict = cxi_peakdiff.get_img_and_peaks_by_event(event)
-                img_1   = img_and_peaks_dict["image"]
-                peaks_1 = img_and_peaks_dict["peaks_1"]
+                peaks_0 = cxi_peakdiff.cxi_manager_0.get_peaks_by_event(event)
+                peaks_1 = cxi_peakdiff.cxi_manager_1.get_peaks_by_event(event)
 
                 self.update_image_panel(img, peaks_0, peaks_1)
 
@@ -287,11 +256,18 @@ class CXIPeakDiffViewer:
             self.clear_image_panel()
 
 
-    def load_selected_event_by_index(self, index):
-        img_and_peaks_dict_1 = self.cxi_peakdiff.get_img_and_peaks_by_event(index)
-        img_1 = img_and_peaks_dict_1["image"]
-        peaks_1 = img_and_peaks_dict_1["peaks_1"]
-        self.update_image_panel(img, peaks_1)
+    def load_selected_event_by_index(self, event):
+        cxi_peakdiff = self.cxi_peakdiff
+
+        # Uses cxi_0 images???
+        img = cxi_peakdiff.cxi_manager_0.get_img_by_event(event) \
+              if cxi_peakdiff.uses_cxi_0_img else                \
+              cxi_peakdiff.cxi_manager_1.get_img_by_event(event)
+
+        peaks_0 = cxi_peakdiff.cxi_manager_0.get_peaks_by_event(event)
+        peaks_1 = cxi_peakdiff.cxi_manager_1.get_peaks_by_event(event)
+
+        self.update_image_panel(img, peaks_0, peaks_1)
 
 
     def init_section_title_panel(self):
