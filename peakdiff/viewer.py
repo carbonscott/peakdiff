@@ -278,8 +278,11 @@ class CXIPeakDiffViewer:
     def init_section_title_panel(self):
         fig_height   = self.fig_height
         fig_width    = self.fig_width
-        title_width  = 30
-        title_height = fig_height
+
+        main_title_width     = fig_width
+        main_title_height    = 150
+        section_title_width  = 30
+        section_title_height = fig_height
 
         scatter_plot_data_source = self.scatter_plot_data_source
 
@@ -287,77 +290,91 @@ class CXIPeakDiffViewer:
         section_div = {}
 
         div_text = """
-        <div style="
-            background-color: green;
-            color           : white;
-            padding         : 5px;
-            writing-mode    : vertical-lr;
-            transform       : rotate(180deg);
-            height          : 100%;
-            font-weight     : bold;
-            font-size       : 18px;
-            text-align      : center;
-            white-space     : nowrap;
-        ">
+            <h1
+                style="color        : #2e6da4;
+                       text-align   : center;
+                       width        : 100%;
+                       margin-bottom: 10px;
+                       font-size    : 36px;
+            ">
+            PeakDiff Visualizer <hr>
+            </h1>
+        """
+        section_div['title'] = Div(text = div_text, width = main_title_width, height = main_title_height)
+
+        div_text = """
+            <div style="background-color: green;
+                        color           : white;
+                        padding         : 5px;
+                        writing-mode    : vertical-lr;
+                        transform       : rotate(180deg);
+                        height          : 100%;
+                        font-weight     : bold;
+                        font-size       : 18px;
+                        text-align      : center;
+                        white-space     : nowrap;
+            ">
             Scatter Plot
         </div>
         """
-        section_div['scatter_plot'] = Div(text = div_text, width = title_width, height = title_height)
+        section_div['scatter_plot'] = Div(text = div_text, width = section_title_width, height = section_title_height)
         section_div['scatter_plot'].margin = (0, 5, 0, 0)
 
         div_text = """
-        <div style="
-            background-color: gray;
-            color           : white;
-            padding         : 5px;
-            writing-mode    : vertical-lr;
-            transform       : rotate(180deg);
-            height          : 100%;
-            font-weight     : bold;
-            font-size       : 18px;
-            text-align      : center;
-            white-space     : nowrap;
-        ">
-            Selected event
+            <div style="background-color: gray;
+                        color           : white;
+                        padding         : 5px;
+                        writing-mode    : vertical-lr;
+                        transform       : rotate(180deg);
+                        height          : 100%;
+                        font-weight     : bold;
+                        font-size       : 18px;
+                        text-align      : center;
+                        white-space     : nowrap;
+            ">
+            Image Panel
         </div>
         """
-        section_div['selected_event'] = Div(text = div_text, width = title_width, height = title_height)
+        section_div['selected_event'] = Div(text = div_text, width = section_title_width, height = section_title_height)
         section_div['selected_event'].margin = (0, 5, 0, 0)
 
         div_text = """
-        <div style="
-            background-color: blue;
-            color           : white;
-            padding         : 5px;
-            writing-mode    : vertical-lr;
-            transform       : rotate(180deg);
-            height          : 100%;
-            font-weight     : bold;
-            font-size       : 18px;
-            text-align      : center;
-            white-space     : nowrap;
-        ">
-            Selected Indices
+            <div style="background-color: blue;
+                        color           : white;
+                        padding         : 5px;
+                        writing-mode    : vertical-lr;
+                        transform       : rotate(180deg);
+                        height          : 100%;
+                        font-weight     : bold;
+                        font-size       : 18px;
+                        text-align      : center;
+                        white-space     : nowrap;
+            ">
+            Selected Events
         </div>
         """
-        section_div['selected_events'] = Div(text = div_text, width = title_width, height = title_height)
+        section_div['selected_events'] = Div(text = div_text, width = section_title_width, height = section_title_height)
         section_div['selected_events'].margin = (0, 5, 0, 0)
 
         self.section_div = section_div
 
 
     def init_layout(self):
-        fig                  = self.fig
-        selected_event_div   = self.selected_event_div
+        fig                   = self.fig
+        selected_event_div    = self.selected_event_div
         selected_events_table = self.selected_events_table
-        section_div          = self.section_div
+        section_div           = self.section_div
 
         layout = {}
-        layout['scatter_plot'    ] = row(section_div['scatter_plot']    , gridplot([[fig['n_peaks'], fig['m_rates']]], toolbar_location = 'right'))
-        layout['selected_event'  ] = row(section_div['selected_event']  , selected_event_div)
+        layout['title'          ] = row(section_div['title'])
+        layout['scatter_plot'   ] = row(section_div['scatter_plot']    , gridplot([[fig['n_peaks'], fig['m_rates']]], toolbar_location = 'right'))
+        layout['selected_event' ] = row(section_div['selected_event']  , selected_event_div)
         layout['selected_events'] = row(section_div['selected_events'], selected_events_table)
 
-        final_layout = column(layout['scatter_plot'], layout['selected_event'], layout['selected_events'])
+        final_layout = column(layout['title'], 
+                              layout['scatter_plot'],
+                              layout['selected_event'],
+                              layout['selected_events'])
 
         self.final_layout = final_layout
 
