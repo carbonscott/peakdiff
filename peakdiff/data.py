@@ -147,18 +147,18 @@ class CXIPeakDiff:
         n_peaks_1 = self.cxi_manager_1.get_n_peaks()
 
         # ...Keep events having no less than min number of peaks
-        n_peaks_0 = { enum_idx : n for enum_idx, n in enumerate(n_peaks_0) if n >= min_n_peaks }
-        n_peaks_1 = { enum_idx : n for enum_idx, n in enumerate(n_peaks_1) if n >= min_n_peaks }
+        n_peaks_0_filtered = { event : n for event, n in enumerate(n_peaks_0) if n >= min_n_peaks }
+        n_peaks_1_filtered = { event : n for event, n in enumerate(n_peaks_1) if n >= min_n_peaks }
 
         # ...Find common events
-        common_events = list(set([event for event in n_peaks_0.keys()]) & set([event for event in n_peaks_1.keys()]))
+        common_events = list(set([event for event in n_peaks_0_filtered.keys()]) & set([event for event in n_peaks_1_filtered.keys()]))
 
         # ...Build a list of input event and metadata
         event_data = []
         for event in common_events:
             # ...Get num of peaks by event
-            n_peaks_by_event_0 = n_peaks_0[event]
-            n_peaks_by_event_1 = n_peaks_1[event]
+            n_peaks_by_event_0 = n_peaks_0_filtered[event]
+            n_peaks_by_event_1 = n_peaks_1_filtered[event]
 
             event_data.append(
                 {

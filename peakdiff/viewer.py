@@ -80,6 +80,7 @@ class CXIPeakDiffViewer:
 
     def update_indices_panel(self, attr, old, new):
         selected_indices = self.scatter_plot_data_source.selected.indices
+        selected_events  = [ self.scatter_plot_data_source.data['events'][item] for item in selected_indices ]
         self.selected_indices_data_source.data = {'indices': selected_indices}
 
         # Clear the image panel if no indices are selected
@@ -206,7 +207,8 @@ class CXIPeakDiffViewer:
 
         def load_selected(attr, old, new):
             if len(new) == 1:
-                event = new[0]
+                selected_index = new[0]
+                event = self.scatter_plot_data_source.data['events'][selected_index]
 
                 # Uses cxi_0 images???
                 img = cxi_peakdiff.cxi_manager_0.get_img_by_event(event) \
@@ -251,7 +253,8 @@ class CXIPeakDiffViewer:
     def on_table_select(self, attr, old, new):
         if new:
             selected_index = self.selected_indices_data_source.data['indices'][new[0]]
-            self.load_selected_event_by_index(selected_index)
+            event = self.scatter_plot_data_source.data['events'][selected_index]
+            self.load_selected_event_by_index(event)
         else:
             self.clear_image_panel()
 
