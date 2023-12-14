@@ -35,23 +35,27 @@ class CXIPeakDiffViewer:
 
         TOOLS = "tap,box_select,lasso_select,wheel_zoom,pan,reset,help,"
 
+        peakfinder_0 = self.cxi_peakdiff.cxi_config_0.peakfinder
+        peakfinder_1 = self.cxi_peakdiff.cxi_config_1.peakfinder
         fig = dict(
             n_peaks = figure(width        =  fig_width,
                              height       =  fig_height,
                              tools        =  TOOLS,
                              title        = "Number of peaks comparison",
-                             x_axis_label = 'pyalgo',
-                             y_axis_label = 'peaknet',
+                             x_axis_label = peakfinder_0,
+                             y_axis_label = peakfinder_1,
                              match_aspect = True,
-                             active_scroll="wheel_zoom"),
+                             active_scroll="wheel_zoom",
+                             active_drag  ="pan"),
             m_rates = figure(width        =  fig_width,
                              height       =  fig_height,
                              tools        =  TOOLS,
                              title        = "Match rate comparison",
-                             x_axis_label = 'pyalgo',
-                             y_axis_label = 'peaknet',
+                             x_axis_label = peakfinder_0,
+                             y_axis_label = peakfinder_1,
                              match_aspect = True,
-                             active_scroll="wheel_zoom"),
+                             active_scroll="wheel_zoom",
+                             active_drag  ="pan"),
         )
 
         scatter_n_peaks = fig['n_peaks'].scatter('n_peaks_x',
