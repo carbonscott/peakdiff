@@ -50,17 +50,23 @@ def run_bokeh_server(path_yaml, port, websocket_origin):
     # Create a Bokeh Application with the specified yaml
     bokeh_app = Application(FunctionHandler(lambda doc: create_document(doc, path_yaml)))
 
-    # Define server settings
-    server_settings = {
-        'port': port,
-        'allow_websocket_origin': [websocket_origin]
-    }
+    try:
+        # Define server settings
+        server_settings = {
+            'port': port,
+            'allow_websocket_origin': [websocket_origin]
+        }
 
-    # Create and start the Bokeh server
-    server = Server({'/': bokeh_app}, **server_settings)
-    server.start()
+        # Create and start the Bokeh server
+        server = Server({'/': bokeh_app}, **server_settings)
+        server.start()
 
-    server.io_loop.start()
+        server.io_loop.start()
+
+    except KeyboardInterrupt:
+        print("Shutting down...")
+        server.stop()
+        server.io_loop.stop()
 
 
 def main():
