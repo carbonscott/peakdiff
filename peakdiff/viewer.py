@@ -20,7 +20,7 @@ class CXIPeakDiffViewer:
 
         self.init_scatterplot_panel()
         self.init_image_panel()
-        self.init_indices_panel()
+        self.init_events_panel()
         self.init_section_title_panel()
         self.init_layout()
 
@@ -75,16 +75,17 @@ class CXIPeakDiffViewer:
 
         self.fig = fig
 
-        scatter_plot_data_source.selected.on_change('indices', self.update_indices_panel)
+        scatter_plot_data_source.selected.on_change('indices', self.update_events_panel)
 
 
-    def update_indices_panel(self, attr, old, new):
+    def update_events_panel(self, attr, old, new):
+        # [NOTE] Indices is a concept in bokeh data source.  Event is a concept in CXI.
         selected_indices = self.scatter_plot_data_source.selected.indices
         selected_events  = [ self.scatter_plot_data_source.data['events'][item] for item in selected_indices ]
-        self.selected_indices_data_source.data = {'indices': selected_events}
+        self.selected_events_data_source.data = {'events': selected_events}
 
-        # Clear the image panel if no indices are selected
-        if not selected_indices:
+        # Clear the image panel if no events are selected
+        if not selected_events:
             self.clear_image_panel()
 
 
@@ -225,7 +226,7 @@ class CXIPeakDiffViewer:
         self.selected_event_div = fig
 
 
-    def init_indices_panel(self):
+    def init_events_panel(self):
         fig_height   = self.fig_height
         fig_width    = self.fig_width
         title_width  = 30
@@ -234,25 +235,25 @@ class CXIPeakDiffViewer:
         scatter_plot_data_source = self.scatter_plot_data_source
 
         # Create a data source for the DataTable
-        self.selected_indices_data_source = ColumnDataSource(data={'indices': []})
+        self.selected_events_data_source = ColumnDataSource(data={'events': []})
 
         # Define columns for the DataTable
-        columns = [TableColumn(field="indices", title="Selected Indices")]
+        columns = [TableColumn(field="events", title="Selected Indices")]
 
         # Create the DataTable
-        self.selected_indices_table = DataTable(source=self.selected_indices_data_source,
+        self.selected_events_table = DataTable(source=self.selected_events_data_source,
                                                 columns=columns,
                                                 width=2 * fig_width,
                                                 height=title_height,
                                                 selectable=True,
                                                 header_row=False)
 
-        self.selected_indices_table.source.selected.on_change('indices', self.on_table_select)
+        self.selected_events_table.source.selected.on_change('indices', self.on_table_select)
 
 
     def on_table_select(self, attr, old, new):
         if new:
-            event = self.selected_indices_data_source.data['indices'][new[0]]
+            event = self.selected_events_data_source.data['events'][new[0]]
             ## selected_index = self.selected_indices_data_source.data['indices'][new[0]]
             ## event = self.scatter_plot_data_source.data['events'][selected_index]
             self.load_selected_event_by_index(event)
@@ -339,8 +340,8 @@ class CXIPeakDiffViewer:
             Selected Indices
         </div>
         """
-        section_div['selected_indices'] = Div(text = div_text, width = title_width, height = title_height)
-        section_div['selected_indices'].margin = (0, 5, 0, 0)
+        section_div['selected_events'] = Div(text = div_text, width = title_width, height = title_height)
+        section_div['selected_events'].margin = (0, 5, 0, 0)
 
         self.section_div = section_div
 
@@ -348,15 +349,15 @@ class CXIPeakDiffViewer:
     def init_layout(self):
         fig                  = self.fig
         selected_event_div   = self.selected_event_div
-        selected_indices_table = self.selected_indices_table
+        selected_events_table = self.selected_events_table
         section_div          = self.section_div
 
         layout = {}
         layout['scatter_plot'    ] = row(section_div['scatter_plot']    , gridplot([[fig['n_peaks'], fig['m_rates']]], toolbar_location = 'right'))
         layout['selected_event'  ] = row(section_div['selected_event']  , selected_event_div)
-        layout['selected_indices'] = row(section_div['selected_indices'], selected_indices_table)
+        layout['selected_events'] = row(section_div['selected_events'], selected_events_table)
 
-        final_layout = column(layout['scatter_plot'], layout['selected_event'], layout['selected_indices'])
+        final_layout = column(layout['scatter_plot'], layout['selected_event'], layout['selected_events'])
 
         self.final_layout = final_layout
 
