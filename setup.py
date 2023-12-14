@@ -14,12 +14,16 @@ setuptools.setup(
     url="https://github.com/carbonscott/peakdiff",
     keywords = ['peakdiff'],
     packages=setuptools.find_packages(),
-    scripts=["bin/peakdiff-visualizer.py"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    entry_points = {
+        'console_scripts' : [
+            'peakdiff-visualizer-cxi=peakdiff.serve_cxi:main',
+        ],
+    },
     python_requires='>=3.6',
     include_package_data=True,
 )
