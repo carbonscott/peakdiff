@@ -280,7 +280,7 @@ class CXIPeakDiffViewer:
         fig_width    = self.fig_width
 
         main_title_width     = fig_width
-        main_title_height    = 150
+        main_title_height    = 100
         section_title_width  = 30
         section_title_height = fig_height
 
@@ -289,18 +289,20 @@ class CXIPeakDiffViewer:
         # Section title...
         section_div = {}
 
-        div_text = """
-            <h1
-                style="color        : #2e6da4;
-                       text-align   : center;
-                       width        : 100%;
-                       margin-bottom: 10px;
-                       font-size    : 36px;
-            ">
-            PeakDiff Visualizer <hr>
-            </h1>
-        """
-        section_div['title'] = Div(text = div_text, width = main_title_width, height = main_title_height)
+        ## div_text = """
+        ##     <h1
+        ##         style="background-color: #2e6da4;
+        ##                color           : white;
+        ##                padding         : 5px;
+        ##                text-align      : center;
+        ##                width           : 100%;
+        ##                margin-left     : 0px;
+        ##                font-size       : 36px;
+        ##     ">
+        ##     PeakDiff Visualizer
+        ##     </h1>
+        ## """
+        ## section_div['title'] = Div(text = div_text, width = main_title_width, height = main_title_height)
 
         div_text = """
             <div style="background-color: green;
@@ -365,16 +367,13 @@ class CXIPeakDiffViewer:
         selected_events_table = self.selected_events_table
         section_div           = self.section_div
 
-        layout = {}
-        layout['title'          ] = row(section_div['title'])
-        layout['scatter_plot'   ] = row(section_div['scatter_plot']    , gridplot([[fig['n_peaks'], fig['m_rates']]], toolbar_location = 'right'))
-        layout['selected_event' ] = row(section_div['selected_event']  , selected_event_div)
-        layout['selected_events'] = row(section_div['selected_events'], selected_events_table)
+        layout_dict = {}
+        ## layout_dict['title'          ] = row(section_div['title'], sizing_mode='stretch_width')
+        layout_dict['scatter_plot'   ] = row(section_div['scatter_plot']    , gridplot([[fig['n_peaks'], fig['m_rates']]], toolbar_location = 'right'))
+        layout_dict['selected_event' ] = row(section_div['selected_event']  , selected_event_div)
+        layout_dict['selected_events'] = row(section_div['selected_events'], selected_events_table)
 
-        final_layout = column(layout['title'], 
-                              layout['scatter_plot'],
-                              layout['selected_event'],
-                              layout['selected_events'])
+        final_layout = column(*tuple(layout_dict.values()))
 
         self.final_layout = final_layout
 
