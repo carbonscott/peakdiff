@@ -8,8 +8,8 @@ from bokeh.server.server                 import Server
 from bokeh.application                   import Application
 from bokeh.application.handlers.function import FunctionHandler
 
-from peakdiff.data import CXIPeakDiff, CXIKeyConfig, CXIConfig, CXIPeakDiffConfig
-from peakdiff.viewer import CXIPeakDiffViewer
+from peakdiff.cxi.data import CXIPeakDiff, CXIKeyConfig, CXIConfig, CXIPeakDiffConfig
+from peakdiff.cxi.viewer import CXIPeakDiffViewer
 
 def create_peakdiff_viewer(config_dict):
     cxi_key_config_0 = CXIKeyConfig(**config_dict['cxi_config_0']['key'])
