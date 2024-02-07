@@ -22,7 +22,7 @@ setuptools.setup(
     entry_points = {
         'console_scripts' : [
             'peakdiff-visualizer-cxi=peakdiff.cxi.serve:main',
-            ## 'peakdiff-visualizer-cxi=peakdiff.stream.serve:main',
+            'peakdiff-visualizer-stream=peakdiff.crystfel_stream.serve:main',
         ],
     },
     python_requires='>=3.6',
