@@ -47,8 +47,8 @@ class StreamPeakDiffViewer:
                                          height       =  fig_height,
                                          tools        =  TOOLS,
                                          title        = "Recall vs Precision",
-                                         x_axis_label = "Recall",
-                                         y_axis_label = "Precision",
+                                         x_axis_label = "Recall (Common/Predicted)",
+                                         y_axis_label = "Precision (Common/Found)",
                                          match_aspect = True,),
         )
 
