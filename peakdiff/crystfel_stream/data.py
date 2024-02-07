@@ -24,19 +24,52 @@ from crystfel_stream_parser.utils  import split_list_into_chunk
 class StreamConfig:
     path_stream   : str
     path_cxi_root : str
+    dir_output    : str
     num_cpus      : int
 
 class StreamManager:
     def __init__(self, config):
         self.path_stream   = config.path_stream
         self.path_cxi_root = config.path_cxi_root
+        self.dir_output    = config.dir_output
         self.num_cpus      = config.num_cpus
 
         self.stream_data = self.parse_stream(self.num_cpus)
 
 
+    def save_stream_as_msgpack(self, path_stream_msgpack, stream_data):
+        stream_data_packed = msgpack.packb(stream_data)
+        with open(path_stream_msgpack, 'wb') as f:
+            f.write(stream_data_packed)
+
+
+    def load_stream_from_msgpack(self, path_stream_msgpack):
+        with open(path_stream_msgpack, 'rb') as f:
+            data_packed = f.read()
+            data = msgpack.unpackb(data_packed, strict_map_key = False)
+
+        return data
+
+
     def parse_stream(self, num_cpus = 2):
-        return StreamParser(self.path_stream).parse(num_cpus = num_cpus)
+        # Assign the new path to metrics...
+        unique_identifier   = self.path_stream
+        hashed_identifier   = hashlib.sha256(unique_identifier.encode()).hexdigest()
+        path_stream_msgpack = os.path.join(self.dir_output, f"cache_{hashed_identifier}.stream.msgpack")
+
+        # Check if cache is available???
+        if not os.path.exists(path_stream_msgpack):
+            # Parse from scratch...
+            stream_data = StreamParser(self.path_stream).parse(num_cpus = num_cpus)
+
+            # Save them...
+            self.save_stream_as_msgpack(path_stream_msgpack, stream_data)
+
+        else:
+            # Load it from cache...
+            stream_data = self.load_stream_from_msgpack(path_stream_msgpack)
+
+        return stream_data
 
 
     def get_num_peaks(self):
@@ -84,11 +117,10 @@ class StreamManager:
         key_event = "/LCLS/eventNumber"
         key_img   = "/entry_1/data_1/data"
         with h5py.File(path_cxi, 'r') as fh:
-            ## event = fh.get(key_event)[idx_in_cxi]
-            ## img = fh.get(key_img)[event][()]
             img = fh.get(key_img)[idx_in_cxi][()]
 
         return img
+
 
 
 
@@ -244,7 +276,7 @@ class StreamPeakDiff:
             # Assign the new path to metrics...
             unique_identifier = self.stream_config.path_stream
             hashed_identifier = hashlib.sha256(unique_identifier.encode()).hexdigest()
-            path_metrics = os.path.join(self.dir_output, f"cache_{hashed_identifier}.msgpack")
+            path_metrics = os.path.join(self.dir_output, f"cache_{hashed_identifier}.peakdiff.msgpack")
 
         # Check if cache is available???
         if not os.path.exists(path_metrics):
