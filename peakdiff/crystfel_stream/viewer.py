@@ -36,6 +36,13 @@ class StreamPeakDiffViewer:
         TOOLS = "tap,box_select,lasso_select,wheel_zoom,pan,reset,help,"
 
         fig = dict(
+            num_peaks = figure(width        =  fig_width,
+                               height       =  fig_height,
+                               tools        =  TOOLS,
+                               title        = "Found peaks vs Predicted peaks",
+                               x_axis_label = "Number of found peaks",
+                               y_axis_label = "Number of predicted peaks",
+                               match_aspect = True,),
             recall_vs_precision = figure(width        =  fig_width,
                                          height       =  fig_height,
                                          tools        =  TOOLS,
@@ -45,6 +52,15 @@ class StreamPeakDiffViewer:
                                          match_aspect = True,),
         )
 
+        scatter_num_peaks = fig['num_peaks'].scatter('num_found_peaks',
+                                                     'num_predicted_peaks',
+                                                     source                  = scatter_plot_data_source,
+                                                     size                    = 10,
+                                                     fill_color              = "blue",
+                                                     line_color              =  None,
+                                                     fill_alpha              = 0.5,
+                                                     nonselection_fill_alpha = 0.005,
+                                                     nonselection_fill_color = "blue")
         scatter_recall_precision = fig['recall_vs_precision'].scatter('recall',
                                                                       'precision',
                                                                       source                  = scatter_plot_data_source,
@@ -189,7 +205,7 @@ class StreamPeakDiffViewer:
         fig.add_tools(hover_tool)
 
         scatter_plot_data_source = self.scatter_plot_data_source
-        stream_peakdiff             = self.stream_peakdiff
+        stream_peakdiff          = self.stream_peakdiff
 
         def load_selected(attr, old, new):
             if len(new) == 1:
@@ -225,11 +241,11 @@ class StreamPeakDiffViewer:
 
         # Create the DataTable
         self.selected_events_table = DataTable(source=self.selected_events_data_source,
-                                                columns=columns,
-                                                width=2 * fig_width,
-                                                height=title_height,
-                                                selectable=True,
-                                                header_row=False)
+                                               columns=columns,
+                                               width=2 * fig_width,
+                                               height=title_height,
+                                               selectable=True,
+                                               header_row=False)
 
         self.selected_events_table.source.selected.on_change('indices', self.on_table_select)
 
@@ -351,7 +367,7 @@ class StreamPeakDiffViewer:
 
         layout_dict = {}
         ## layout_dict['title'          ] = row(section_div['title'], sizing_mode='stretch_width')
-        layout_dict['scatter_plot'   ] = row(section_div['scatter_plot']    , gridplot([[fig['recall_vs_precision']]], toolbar_location = 'right'))
+        layout_dict['scatter_plot'   ] = row(section_div['scatter_plot']    , gridplot([[fig['num_peaks'], fig['recall_vs_precision']]], toolbar_location = 'right'))
         layout_dict['selected_event' ] = row(section_div['selected_event']  , selected_event_div)
         layout_dict['selected_events'] = row(section_div['selected_events'], selected_events_table)
 

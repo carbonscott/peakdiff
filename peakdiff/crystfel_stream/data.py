@@ -202,12 +202,14 @@ class StreamPeakDiff:
 
             return {
                 ## "metadata"  : (frame_idx, metadata['Image filename'], metadata['Event']),
-                "frame_idx" : int(frame_idx),
-                "num_tp"    : int(num_tp),
-                "num_fp"    : int(num_fp),
-                "num_fn"    : int(num_fn),
-                "precision" : float(precision),
-                "recall"    : float(recall),
+                "frame_idx"       : int(frame_idx),
+                "found_peaks"     : int(len(found_peaks)),
+                "predicted_peaks" : int(len(predicted_peaks)),
+                "num_tp"          : int(num_tp),
+                "num_fp"          : int(num_fp),
+                "num_fn"          : int(num_fn),
+                "precision"       : float(precision),
+                "recall"          : float(recall),
             }
 
         # Create the procedure of processing a list of events...
@@ -231,11 +233,13 @@ class StreamPeakDiff:
         futures = [process_batch_of_events.remote(batch, threshold_distance) for batch in batches]
 
         peakdiff_result = dict(
-            num_tp    = {},
-            num_fp    = {},
-            num_fn    = {},
-            precision = {},
-            recall    = {},
+            num_tp          = {},
+            num_fp          = {},
+            num_fn          = {},
+            found_peaks     = {},
+            predicted_peaks = {},
+            precision       = {},
+            recall          = {},
         )
         remaining_futures = futures
         while remaining_futures:
@@ -291,15 +295,19 @@ class StreamPeakDiff:
             metrics = self.load_metrics_from_msgpack(path_metrics)
 
         # Build bokeh data source...
-        num_tp    = metrics["num_tp"   ]
-        num_fp    = metrics["num_fp"   ]
-        num_fn    = metrics["num_fn"   ]
-        precision = metrics["precision"]
-        recall    = metrics["recall"   ]
+        num_tp          = metrics["num_tp"         ]
+        num_fp          = metrics["num_fp"         ]
+        num_fn          = metrics["num_fn"         ]
+        found_peaks     = metrics["found_peaks"    ]
+        predicted_peaks = metrics["predicted_peaks"]
+        precision       = metrics["precision"      ]
+        recall          = metrics["recall"         ]
         data_source = dict(
-            events    = list(num_tp.keys()),    # ...Confusingly, just metadata
-            precision = list(precision.values()),
-            recall    = list(recall.values()),
+            events              = list(num_tp.keys()),    # ...Confusingly, just metadata
+            num_found_peaks     = list(found_peaks.values()),
+            num_predicted_peaks = list(predicted_peaks.values()),
+            precision           = list(precision.values()),
+            recall              = list(recall.values()),
         )
 
         return data_source
