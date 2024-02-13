@@ -367,8 +367,8 @@ class StreamPeakDiffViewer:
 
         layout_dict = {}
         ## layout_dict['title'          ] = row(section_div['title'], sizing_mode='stretch_width')
-        layout_dict['scatter_plot'   ] = row(section_div['scatter_plot']    , gridplot([[fig['num_peaks'], fig['recall_vs_precision']]], toolbar_location = 'right'))
-        layout_dict['selected_event' ] = row(section_div['selected_event']  , selected_event_div)
+        layout_dict['scatter_plot'   ] = row(section_div['scatter_plot']   , gridplot([[fig['num_peaks'], fig['recall_vs_precision']]], toolbar_location = 'right'))
+        layout_dict['selected_event' ] = row(section_div['selected_event'] , selected_event_div)
         layout_dict['selected_events'] = row(section_div['selected_events'], selected_events_table)
 
         final_layout = column(*tuple(layout_dict.values()))
