@@ -44,6 +44,7 @@ class StreamManager:
 
 
     def load_stream_from_msgpack(self, path_stream_msgpack):
+        print(f"Loading stream file from {path_stream_msgpack}...")
         with open(path_stream_msgpack, 'rb') as f:
             data_packed = f.read()
             data = msgpack.unpackb(data_packed, strict_map_key = False)
@@ -268,6 +269,7 @@ class StreamPeakDiff:
 
 
     def load_metrics_from_msgpack(self, path_metrics):
+        print(f"Loading metrics file from {path_metrics}...")
         with open(path_metrics, 'rb') as f:
             data_packed = f.read()
             data = msgpack.unpackb(data_packed, strict_map_key = False)
