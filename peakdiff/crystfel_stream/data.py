@@ -38,6 +38,7 @@ class StreamManager:
 
 
     def save_stream_as_msgpack(self, path_stream_msgpack, stream_data):
+        print(f"Saving stream file from {path_stream_msgpack}...")
         stream_data_packed = msgpack.packb(stream_data)
         with open(path_stream_msgpack, 'wb') as f:
             f.write(stream_data_packed)
@@ -145,6 +146,22 @@ class StreamPeakDiff:
         os.makedirs(self.dir_output, exist_ok=True)
 
 
+    @staticmethod
+    def peakdiff(found_peaks, predicted_peaks, threshold_distance = 5):
+        # Compute a cost matrix...
+        found_peaks     = np.array(found_peaks)
+        predicted_peaks = np.array(predicted_peaks)
+        cost_matrix = cdist(found_peaks, predicted_peaks)
+
+        # Use linear_sum_assignment to find the optimal assignment...
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+
+        # Filter assignments based on some threshold distance...
+        common_peaks = [(i, j) for i, j in zip(row_ind, col_ind) if cost_matrix[i, j] <= threshold_distance]
+
+        return common_peaks
+
+
     def compute_metrics(self, num_cpus, threshold_distance = 5, uses_ray_put = False):
         """
         Currently support single node.
@@ -183,20 +200,22 @@ class StreamPeakDiff:
             found_peaks     = event_data['found peaks'    ]    # [(y, x), ...]
             predicted_peaks = event_data['predicted peaks']    # [(y, x), ...]
 
-            # Compute a cost matrix...
-            found_peaks     = np.array(found_peaks)
-            predicted_peaks = np.array(predicted_peaks)
-            cost_matrix = cdist(found_peaks, predicted_peaks)
+            common_peaks = StreamPeakDiff.peakdiff(found_peaks, predicted_peaks, threshold_distance)
 
-            # Use linear_sum_assignment to find the optimal assignment...
-            row_ind, col_ind = linear_sum_assignment(cost_matrix)
+            ## # Compute a cost matrix...
+            ## found_peaks     = np.array(found_peaks)
+            ## predicted_peaks = np.array(predicted_peaks)
+            ## cost_matrix = cdist(found_peaks, predicted_peaks)
 
-            # Filter assignments based on some threshold distance...
-            close_pairs = [(i, j) for i, j in zip(row_ind, col_ind) if cost_matrix[i, j] <= threshold_distance]
+            ## # Use linear_sum_assignment to find the optimal assignment...
+            ## row_ind, col_ind = linear_sum_assignment(cost_matrix)
+
+            ## # Filter assignments based on some threshold distance...
+            ## common_peaks = [(i, j) for i, j in zip(row_ind, col_ind) if cost_matrix[i, j] <= threshold_distance]
 
             # Calculate metrics...
             # Assume 'common peaks' as 'true peaks'
-            num_tp = len(close_pairs)              # ...True positive
+            num_tp = len(common_peaks)              # ...True positive
             num_fp = len(found_peaks) - num_tp     # ...False positive
             num_fn = len(predicted_peaks) - num_tp # ...False negative
             precision = num_tp / (num_tp + num_fp) # ...Coverage of common peaks in found peaks
@@ -207,6 +226,7 @@ class StreamPeakDiff:
                 "frame_idx"       : int(frame_idx),
                 "found_peaks"     : int(len(found_peaks)),
                 "predicted_peaks" : int(len(predicted_peaks)),
+                ## "common_peaks"    : int(len(common_peaks)),
                 "num_tp"          : int(num_tp),
                 "num_fp"          : int(num_fp),
                 "num_fn"          : int(num_fn),
@@ -263,6 +283,7 @@ class StreamPeakDiff:
 
 
     def save_metrics_as_msgpack(self, path_metrics, metrics):
+        print(f"Saving metrics file from {path_metrics}...")
         metrics_packed = msgpack.packb(metrics)
         with open(path_metrics, 'wb') as f:
             f.write(metrics_packed)
