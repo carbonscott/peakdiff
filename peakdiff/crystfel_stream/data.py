@@ -99,7 +99,7 @@ class StreamManager:
         return peaks
 
 
-    def get_predicted_peaks(self, seqi, sigma_cut = 3):
+    def get_predicted_peaks(self, seqi, sigma_cut = float('-inf')):
         peaks = [ peak for crystal in self.stream_data[seqi]['crystal']
                            for peaks in crystal['predicted peaks'].values()
                                for peak in peaks ]

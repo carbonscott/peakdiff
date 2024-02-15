@@ -6,6 +6,7 @@ from bokeh.plotting       import figure, show
 from bokeh.layouts        import gridplot, row, column
 from bokeh.io             import curdoc
 from bokeh.models.mappers import LogColorMapper
+from bokeh.models.widgets import Slider, TextInput
 
 
 class StreamPeakDiffViewer:
@@ -104,6 +105,20 @@ class StreamPeakDiffViewer:
         )
 
 
+    def update_predicted_peaks(self, peaks_1):
+        if len(peaks_1) == 0:
+            peaks_1 = [[], []]
+
+        offset = 3
+        y, x = peaks_1
+        self.rect_peak_data_source_1.data = data=dict(
+            x      = x,
+            y      = y,
+            width  = [2*offset] * len(x),
+            height = [2*offset] * len(y),
+        )
+
+
     def update_image_panel(self, img, peaks_0, peaks_1):
         # Create ColumnDataSource
         H, W = img.shape
@@ -130,6 +145,7 @@ class StreamPeakDiffViewer:
             width  = [2*offset] * len(x),
             height = [2*offset] * len(y),
         )
+
         try:
             y, x = peaks_1
         except ValueError:
@@ -141,8 +157,11 @@ class StreamPeakDiffViewer:
             height = [2*offset] * len(y),
         )
 
+        self.sigma_cut_input.value = str(float('-inf'))
+
 
     def init_image_panel(self):
+        # [[[ Figure ]]]
         fig_height   = self.fig_height
         fig_width    = self.fig_width * 2
 
@@ -222,7 +241,60 @@ class StreamPeakDiffViewer:
 
         scatter_plot_data_source.selected.on_change('indices', load_selected)
 
-        self.selected_event_div = fig
+        # [[[ Slider ]]]
+        # Initialize the sigma_cut inputbox
+        self.sigma_cut_input = TextInput(value="-inf", title="Sigma Cut:")
+        self.sigma_cut_input.on_change('value', self.sigma_cut_input_callback)
+        ## self.sigma_cut_slider = Slider(start=-10, end=10, value=-10, step=0.1, title="Sigma Cut")
+        ## self.sigma_cut_slider.on_change('value', self.sigma_cut_slider_callback)
+
+        ## fig_layout = gridplot([[fig, self.sigma_cut_slider]])
+        fig_layout = gridplot([[fig, self.sigma_cut_input]], toolbar_location = 'left')
+
+        self.selected_event_div = fig_layout
+
+
+    ## def sigma_cut_slider_callback(self, attr, old, new):
+    ##     stream_peakdiff          = self.stream_peakdiff
+
+    ##     selected_indices = self.scatter_plot_data_source.selected.indices
+    ##     if selected_indices:
+    ##         # Assuming the first selected index is the one we're interested in
+    ##         selected_index  = selected_indices[0]
+    ##         frame_idx       = self.scatter_plot_data_source.data['events'][selected_index]
+    ##         sigma_cut       = self.sigma_cut_slider.value
+    ##         img             = stream_peakdiff.stream_manager.get_img(frame_idx)
+    ##         peaks_found     = stream_peakdiff.stream_manager.get_found_peaks(frame_idx)
+    ##         peaks_predicted = stream_peakdiff.stream_manager.get_predicted_peaks(frame_idx, sigma_cut)
+    ##         peaks_found     = list(map(list, zip(*peaks_found)))    # Tranpose [(y, x), ...] into [(y, ...), (x, ...)]
+    ##         peaks_predicted = list(map(list, zip(*peaks_predicted)))
+
+    ##         self.update_predicted_peaks(peaks_predicted)
+
+
+    def sigma_cut_input_callback(self, attr, old, new):
+        stream_peakdiff = self.stream_peakdiff
+
+        selected_indices = self.scatter_plot_data_source.selected.indices
+        if selected_indices:
+            # Assuming the first selected index is the one we're interested in
+            selected_index  = selected_indices[0]
+            frame_idx       = self.scatter_plot_data_source.data['events'][selected_index]
+
+            # Parse the sigma_cut value from the input box
+            sigma_cut = float('-inf')
+            try:
+                sigma_cut = float(self.sigma_cut_input.value)
+            except ValueError:
+                self.sigma_cut_input.value = "-inf"
+
+            img             = stream_peakdiff.stream_manager.get_img(frame_idx)
+            peaks_found     = stream_peakdiff.stream_manager.get_found_peaks(frame_idx)
+            peaks_predicted = stream_peakdiff.stream_manager.get_predicted_peaks(frame_idx, sigma_cut)
+            peaks_found     = list(map(list, zip(*peaks_found)))    # Tranpose [(y, x), ...] into [(y, ...), (x, ...)]
+            peaks_predicted = list(map(list, zip(*peaks_predicted)))
+
+            self.update_predicted_peaks(peaks_predicted)
 
 
     def init_events_panel(self):
