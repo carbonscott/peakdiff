@@ -177,8 +177,7 @@ def main():
     stream_peakdiff_config = StreamPeakDiffConfig(stream_config = stream_config, dir_output = dir_output)
     stream_peakdiff        = StreamPeakDiff(stream_peakdiff_config)
 
-    # ___/ RAY TASKS \___
-    # Save stream peakdiff data into a ray object store...
+    # Save shared data into a ray object store...
     shared_data = {
         'basename_h5'     : basename_h5,
         'dir_h5'          : dir_h5,
@@ -189,6 +188,7 @@ def main():
     }
     shared_data_ref = ray.put(shared_data)
 
+    # ___/ RAY TASKS \___
     # Create batches of events (one event corresponds to one frame)...
     num_events    = len(frame_idx_list)
     event_batches = [frame_idx_list[i:min(i + batch_size, num_events)] for i in range(0, num_events, batch_size)]
