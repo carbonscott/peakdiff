@@ -254,33 +254,21 @@ class StreamPeakDiffViewer:
         self.selected_event_div = fig_layout
 
 
-    ## def sigma_cut_slider_callback(self, attr, old, new):
-    ##     stream_peakdiff          = self.stream_peakdiff
-
-    ##     selected_indices = self.scatter_plot_data_source.selected.indices
-    ##     if selected_indices:
-    ##         # Assuming the first selected index is the one we're interested in
-    ##         selected_index  = selected_indices[0]
-    ##         frame_idx       = self.scatter_plot_data_source.data['events'][selected_index]
-    ##         sigma_cut       = self.sigma_cut_slider.value
-    ##         img             = stream_peakdiff.stream_manager.get_img(frame_idx)
-    ##         peaks_found     = stream_peakdiff.stream_manager.get_found_peaks(frame_idx)
-    ##         peaks_predicted = stream_peakdiff.stream_manager.get_predicted_peaks(frame_idx, sigma_cut)
-    ##         peaks_found     = list(map(list, zip(*peaks_found)))    # Tranpose [(y, x), ...] into [(y, ...), (x, ...)]
-    ##         peaks_predicted = list(map(list, zip(*peaks_predicted)))
-
-    ##         self.update_predicted_peaks(peaks_predicted)
-
-
     def sigma_cut_input_callback(self, attr, old, new):
         stream_peakdiff = self.stream_peakdiff
 
-        selected_indices = self.scatter_plot_data_source.selected.indices
-        if selected_indices:
-            # Assuming the first selected index is the one we're interested in
-            selected_index  = selected_indices[0]
-            frame_idx       = self.scatter_plot_data_source.data['events'][selected_index]
+        frame_idx = None
+        scatter_plot_selected_indices = self.scatter_plot_data_source.selected.indices
+        if scatter_plot_selected_indices:
+            selected_index = scatter_plot_selected_indices[0]
+            frame_idx = self.scatter_plot_data_source.data['events'][selected_index]
 
+        table_selected_indices = self.selected_events_table.source.selected.indices
+        if table_selected_indices:
+            selected_index = table_selected_indices[0]
+            frame_idx = self.selected_events_data_source.data['events'][selected_index]
+
+        if frame_idx is not None:
             # Parse the sigma_cut value from the input box
             sigma_cut = float('-inf')
             try:
