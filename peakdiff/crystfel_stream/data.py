@@ -108,6 +108,21 @@ class StreamManager:
         return peaks
 
 
+    def split_peaks_by_sigma(self, seqi, sigma_cut = float('-inf')):
+        peaks = [ peak for crystal in self.stream_data[seqi]['crystal']
+                           for peaks in crystal['predicted peaks'].values()
+                               for peak in peaks ]
+        good_peaks = []
+        bad_peaks  = []
+        for h, k, l, intensity, sigma, max_peak, background, x, y in peaks:
+            if intensity/sigma >= sigma_cut:
+                good_peaks.append((y, x))
+            else:
+                bad_peaks.append((y, x))
+
+        return good_peaks, bad_peaks
+
+
     def get_img(self, seqi):
         path_cxi_root = self.path_cxi_root
         path_cxi      = self.stream_data[seqi]['metadata']['Image filename']
