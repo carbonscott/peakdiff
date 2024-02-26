@@ -131,12 +131,26 @@ class StreamManager:
         idx_in_cxi    = self.stream_data[seqi]['metadata']['Event'][2:]    # '//375'
         idx_in_cxi    = int(idx_in_cxi)
 
-        key_event = "/LCLS/eventNumber"
         key_img   = "/entry_1/data_1/data"
         with h5py.File(path_cxi, 'r') as fh:
             img = fh.get(key_img)[idx_in_cxi][()]
 
         return img
+
+
+    def get_psana_event_idx(self, seqi):
+        path_cxi_root = self.path_cxi_root
+        path_cxi      = self.stream_data[seqi]['metadata']['Image filename']
+        path_cxi      = os.path.join(path_cxi_root, path_cxi)
+
+        idx_in_cxi    = self.stream_data[seqi]['metadata']['Event'][2:]    # '//375'
+        idx_in_cxi    = int(idx_in_cxi)
+
+        key_psana_event_idx = "/LCLS/eventNumber"
+        with h5py.File(path_cxi, 'r') as fh:
+            psana_event_idx = fh.get(key_psana_event_idx)[idx_in_cxi][()]
+
+        return psana_event_idx
 
 
 
