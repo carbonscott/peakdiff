@@ -280,7 +280,7 @@ class StreamPeakDiff:
         if uses_ray_put:
             batches = [ray.put(batch) for batch in batches]
 
-        # Register the computation at remote nodes...
+        # Submit the computation jobs at remote nodes and they will start now...
         futures = [process_batch_of_events.remote(batch, threshold_distance) for batch in batches]
 
         peakdiff_result = dict(
