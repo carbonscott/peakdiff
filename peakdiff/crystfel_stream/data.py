@@ -8,6 +8,7 @@ import signal
 import msgpack
 import numpy as np
 import hashlib
+import regex
 
 import ray
 
@@ -35,6 +36,23 @@ class StreamManager:
         self.num_cpus      = config.num_cpus
 
         self.stream_data = self.parse_stream(self.num_cpus)
+
+        self.misc = {
+            "psana_exprun" : regex.compile(
+                                 r"""(?x)
+                                     (?&EXP)_r(?&RUN)
+
+                                     (?(DEFINE)
+                                         (?<EXP>
+                                             [^/]+
+                                         )
+                                         (?<RUN>
+                                             \d{4}
+                                         )
+                                     )
+                                 """
+                             )
+        }
 
 
     def save_stream_as_msgpack(self, path_stream_msgpack, stream_data):
@@ -138,19 +156,28 @@ class StreamManager:
         return img
 
 
-    def get_psana_event_idx(self, seqi):
-        path_cxi_root = self.path_cxi_root
-        path_cxi      = self.stream_data[seqi]['metadata']['Image filename']
-        path_cxi      = os.path.join(path_cxi_root, path_cxi)
+    def get_psana_event_tuple(self, seqi):
+        path_cxi_root      = self.path_cxi_root
+        path_cxi_in_stream = self.stream_data[seqi]['metadata']['Image filename']
+        path_cxi           = os.path.join(path_cxi_root, path_cxi_in_stream)
 
-        idx_in_cxi    = self.stream_data[seqi]['metadata']['Event'][2:]    # '//375'
-        idx_in_cxi    = int(idx_in_cxi)
+        # Try to figure out the (exp, run) otherwise just use empty string...
+        exp, run = None, None
+        psana_exprun_pattern = self.misc["psana_exprun"]
+        match = regex.search(psana_exprun_pattern, path_cxi_in_stream)
+        if match is not None:
+            capture_dict = match.capturesdict()
+            exp = capture_dict["EXP"][0]
+            run = capture_dict["RUN"][0]
+
+        idx_in_cxi = self.stream_data[seqi]['metadata']['Event'][2:]    # '//375'
+        idx_in_cxi = int(idx_in_cxi)
 
         key_psana_event_idx = "/LCLS/eventNumber"
         with h5py.File(path_cxi, 'r') as fh:
             psana_event_idx = fh.get(key_psana_event_idx)[idx_in_cxi][()]
 
-        return psana_event_idx
+        return (exp, run, psana_event_idx)
 
 
 
