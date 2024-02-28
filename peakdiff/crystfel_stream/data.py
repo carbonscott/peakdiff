@@ -27,6 +27,8 @@ class StreamConfig:
     path_cxi_root : str
     dir_output    : str
     num_cpus      : int
+    cxi_key_data  : Optional[str] = '/entry_1/data_1/data'
+    cxi_key_event : Optional[str] = '/LCLS/eventNumber'
 
 class StreamManager:
     def __init__(self, config):
@@ -34,6 +36,11 @@ class StreamManager:
         self.path_cxi_root = config.path_cxi_root
         self.dir_output    = config.dir_output
         self.num_cpus      = config.num_cpus
+
+        self.cxi_key  = {
+            "data"  : config.cxi_key_data,
+            "event" : config.cxi_key_event,
+        }
 
         self.stream_data = self.parse_stream(self.num_cpus)
 
@@ -149,7 +156,7 @@ class StreamManager:
         idx_in_cxi    = self.stream_data[seqi]['metadata']['Event'][2:]    # '//375'
         idx_in_cxi    = int(idx_in_cxi)
 
-        key_img   = "/entry_1/data_1/data"
+        key_img   = self.cxi_key["data"]
         with h5py.File(path_cxi, 'r') as fh:
             img = fh.get(key_img)[idx_in_cxi][()]
 
@@ -173,7 +180,7 @@ class StreamManager:
         idx_in_cxi = self.stream_data[seqi]['metadata']['Event'][2:]    # '//375'
         idx_in_cxi = int(idx_in_cxi)
 
-        key_psana_event_idx = "/LCLS/eventNumber"
+        key_psana_event_idx = self.cxi_key["event"]
         with h5py.File(path_cxi, 'r') as fh:
             psana_event_idx = fh.get(key_psana_event_idx)[idx_in_cxi][()]
 
