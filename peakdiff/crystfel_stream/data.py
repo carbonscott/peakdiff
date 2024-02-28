@@ -168,7 +168,7 @@ class StreamManager:
         path_cxi_in_stream = self.stream_data[seqi]['metadata']['Image filename']
         path_cxi           = os.path.join(path_cxi_root, path_cxi_in_stream)
 
-        # Try to figure out the (exp, run) otherwise just use empty string...
+        # Try to figure out the (exp, run) otherwise just use None...
         exp, run = None, None
         psana_exprun_pattern = self.misc["psana_exprun"]
         match = regex.search(psana_exprun_pattern, path_cxi_in_stream)
