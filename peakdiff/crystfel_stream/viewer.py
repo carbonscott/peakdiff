@@ -11,7 +11,7 @@ from bokeh.models.widgets import Slider, TextInput
 
 class StreamPeakDiffViewer:
 
-    def __init__(self, stream_peakdiff, fig_height = 600, fig_width = 600, num_cpus = 20):
+    def __init__(self, stream_peakdiff, num_cpus, fig_height = 600, fig_width = 600):
         self.fig_height      = fig_height
         self.fig_width       = fig_width
         self.stream_peakdiff = stream_peakdiff

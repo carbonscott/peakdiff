@@ -15,9 +15,10 @@ def create_peakdiff_viewer(config_dict):
     stream_config          = StreamConfig(**config_dict['stream_config'])
     ignores_cache          = config_dict['ignores_cache']
     dir_output             = config_dict['dir_output'   ]
+    num_cpus               = config_dict['num_cpus']
     stream_peakdiff_config = StreamPeakDiffConfig(stream_config = stream_config, ignores_cache = ignores_cache, dir_output = dir_output)
     stream_peakdiff        = StreamPeakDiff(stream_peakdiff_config)
-    viewer                 = StreamPeakDiffViewer(stream_peakdiff = stream_peakdiff)
+    viewer                 = StreamPeakDiffViewer(stream_peakdiff = stream_peakdiff, num_cpus = num_cpus)
 
     return viewer
 
