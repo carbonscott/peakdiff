@@ -13,8 +13,9 @@ from peakdiff.crystfel_stream.viewer import StreamPeakDiffViewer
 
 def create_peakdiff_viewer(config_dict):
     stream_config          = StreamConfig(**config_dict['stream_config'])
-    dir_output             = config_dict['dir_output']
-    stream_peakdiff_config = StreamPeakDiffConfig(stream_config = stream_config, dir_output    = dir_output)
+    ignores_cache          = config_dict['ignores_cache']
+    dir_output             = config_dict['dir_output'   ]
+    stream_peakdiff_config = StreamPeakDiffConfig(stream_config = stream_config, ignores_cache = ignores_cache, dir_output = dir_output)
     stream_peakdiff        = StreamPeakDiff(stream_peakdiff_config)
     viewer                 = StreamPeakDiffViewer(stream_peakdiff = stream_peakdiff)
 

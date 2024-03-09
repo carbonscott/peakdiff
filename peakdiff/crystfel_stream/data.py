@@ -18,13 +18,15 @@ from typing import Optional, Dict
 from scipy.spatial.distance import cdist
 from scipy.optimize         import linear_sum_assignment
 
-from crystfel_stream_parser.engine import StreamParser
-from crystfel_stream_parser.utils  import split_list_into_chunk
+from crystfel_stream_parser.engine            import StreamParser
+from crystfel_stream_parser.cheetah_converter import CheetahConverter
+from crystfel_stream_parser.utils             import split_list_into_chunk
 
 @dataclass
 class StreamConfig:
     path_stream   : str
     path_cxi_root : str
+    ignores_cache : bool
     dir_output    : str
     num_cpus      : int
     cxi_key_data  : Optional[str] = '/entry_1/data_1/data'
@@ -34,6 +36,7 @@ class StreamManager:
     def __init__(self, config):
         self.path_stream   = config.path_stream
         self.path_cxi_root = config.path_cxi_root
+        self.ignores_cache = config.ignores_cache
         self.dir_output    = config.dir_output
         self.num_cpus      = config.num_cpus
 
@@ -61,6 +64,8 @@ class StreamManager:
                              )
         }
 
+        self.pixel_map_cache = None
+
 
     def save_stream_as_msgpack(self, path_stream_msgpack, stream_data):
         print(f"Saving stream file from {path_stream_msgpack}...")
@@ -85,7 +90,7 @@ class StreamManager:
         path_stream_msgpack = os.path.join(self.dir_output, f"cache_{hashed_identifier}.stream.msgpack")
 
         # Check if cache is available???
-        if not os.path.exists(path_stream_msgpack):
+        if not os.path.exists(path_stream_msgpack) or self.ignores_cache:
             # Parse from scratch...
             stream_data = StreamParser(self.path_stream).parse(num_cpus = num_cpus)
 
@@ -103,14 +108,14 @@ class StreamManager:
         '''
         Returns a generator.
         '''
-        return ( int(self.stream_data[i]['metadata']['num_peaks']) for i, _ in enumerate(self.stream_data) )
+        return ( int(self.stream_data[i]['CHUNK_BLOCK']['metadata']['num_peaks']) for i, _ in enumerate(self.stream_data) )
 
 
     def get_indexed_frame(self):
         '''
         Returns a generator.
         '''
-        return ( i for i, _ in enumerate(self.stream_data) if len(self.stream_data[i]['crystal']) > 0 )
+        return ( i for i, _ in enumerate(self.stream_data) if len(self.stream_data[i]['CHUNK_BLOCK']['crystal']) > 0 )
 
 
     def get_found_peaks(self, seqi):
@@ -118,14 +123,14 @@ class StreamManager:
         fs -> x
         ss -> y
         '''
-        peaks = [ peak for peaks in self.stream_data[seqi]['found peaks'].values() for peak in peaks ]
+        peaks = [ peak for peaks in self.stream_data[seqi]['CHUNK_BLOCK']['found peaks'].values() for peak in peaks ]
         peaks = [ (y, x) for x, y, _, _, in peaks ]
 
         return peaks
 
 
     def get_predicted_peaks(self, seqi, sigma_cut = float('-inf')):
-        peaks = [ peak for crystal in self.stream_data[seqi]['crystal']
+        peaks = [ peak for crystal in self.stream_data[seqi]['CHUNK_BLOCK']['crystal']
                            for peaks in crystal['predicted peaks'].values()
                                for peak in peaks ]
         peaks = [ (y, x) for h, k, l, intensity, sigma, max_peak, background, x, y in peaks if intensity/sigma >= sigma_cut]
@@ -134,7 +139,7 @@ class StreamManager:
 
 
     def split_peaks_by_sigma(self, seqi, sigma_cut = float('-inf')):
-        peaks = [ peak for crystal in self.stream_data[seqi]['crystal']
+        peaks = [ peak for crystal in self.stream_data[seqi]['CHUNK_BLOCK']['crystal']
                            for peaks in crystal['predicted peaks'].values()
                                for peak in peaks ]
         good_peaks = []
@@ -150,10 +155,10 @@ class StreamManager:
 
     def get_img(self, seqi):
         path_cxi_root = self.path_cxi_root
-        path_cxi      = self.stream_data[seqi]['metadata']['Image filename']
+        path_cxi      = self.stream_data[seqi]['CHUNK_BLOCK']['metadata']['Image filename']
         path_cxi      = os.path.join(path_cxi_root, path_cxi)
 
-        idx_in_cxi    = self.stream_data[seqi]['metadata']['Event'][2:]    # '//375'
+        idx_in_cxi    = self.stream_data[seqi]['CHUNK_BLOCK']['metadata']['Event'][2:]    # '//375'
         idx_in_cxi    = int(idx_in_cxi)
 
         key_img   = self.cxi_key["data"]
@@ -165,7 +170,7 @@ class StreamManager:
 
     def get_psana_event_tuple(self, seqi):
         path_cxi_root      = self.path_cxi_root
-        path_cxi_in_stream = self.stream_data[seqi]['metadata']['Image filename']
+        path_cxi_in_stream = self.stream_data[seqi]['CHUNK_BLOCK']['metadata']['Image filename']
         path_cxi           = os.path.join(path_cxi_root, path_cxi_in_stream)
 
         # Try to figure out the (exp, run) otherwise just use None...
@@ -177,7 +182,7 @@ class StreamManager:
             exp = capture_dict["EXP"][0]
             run = capture_dict["RUN"][0]
 
-        idx_in_cxi = self.stream_data[seqi]['metadata']['Event'][2:]    # '//375'
+        idx_in_cxi = self.stream_data[seqi]['CHUNK_BLOCK']['metadata']['Event'][2:]    # '//375'
         idx_in_cxi = int(idx_in_cxi)
 
         key_psana_event_idx = self.cxi_key["event"]
@@ -187,11 +192,41 @@ class StreamManager:
         return (exp, run, psana_event_idx)
 
 
+    def cache_pixel_maps(self):
+        block_dict = self.stream_data
+
+        pixel_map_cache = {}
+        for block_idx, block in block_dict.items():
+            # Precompute if it's a geom block???
+            if block['IS_REF_GEOM_BLOCK']:
+                img = self.get_img(block_idx)
+
+                cheetah_converter = CheetahConverter(block['GEOM_BLOCK'])
+                psana_img = cheetah_converter.convert_to_psana_img(img)
+                pixel_map_x, pixel_map_y, pixel_map_z = cheetah_converter.calculate_pixel_map(psana_img)
+
+                pixel_map_cache[block_idx] = (pixel_map_x, pixel_map_y, pixel_map_z)
+
+            else:
+                pixel_map_cache[block_idx] = pixel_map_cache[block_idx - 1]    # Always refers to the previous pixel map
+
+        return pixel_map_cache
+
+
+    def get_pixel_map(self, seqi):
+        # Precompute if haven't already???
+        if self.pixel_map_cache is None:
+            self.pixel_map_cache = self.cache_pixel_maps()
+
+        return self.pixel_map_cache.get(seqi, None)
+
+
 
 
 @dataclass
 class StreamPeakDiffConfig:
     stream_config : StreamConfig
+    ignores_cache : bool = False
     dir_output    : Optional[str] = 'peakdiff_results'
 
 class StreamPeakDiff:
@@ -203,6 +238,7 @@ class StreamPeakDiff:
 
         self.stream_config = config.stream_config
         self.dir_output    = config.dir_output
+        self.ignores_cache = config.ignores_cache
 
         self.stream_manager = StreamManager(self.stream_config)
 
@@ -250,7 +286,7 @@ class StreamPeakDiff:
         # ...Build a list of input event and metadata
         event_data = [ {
             'frame_idx'       : frame_idx,
-            'metadata'        : stream_manager.stream_data[frame_idx]['metadata'],
+            'metadata'        : stream_manager.stream_data[frame_idx]['CHUNK_BLOCK']['metadata'],
             'found peaks'     : stream_manager.get_found_peaks(frame_idx),
             'predicted peaks' : stream_manager.get_predicted_peaks(frame_idx),
         } for frame_idx in indexed_frame_idx_list ]
@@ -370,7 +406,7 @@ class StreamPeakDiff:
             path_metrics = os.path.join(self.dir_output, f"cache_{hashed_identifier}.peakdiff.msgpack")
 
         # Check if cache is available???
-        if not os.path.exists(path_metrics):
+        if not os.path.exists(path_metrics) or self.ignores_cache:
             # Compute the metrics...
             metrics = self.compute_metrics(num_cpus = num_cpus)
 
