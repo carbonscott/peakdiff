@@ -205,7 +205,11 @@ class StreamManager:
                 psana_img = cheetah_converter.convert_to_psana_img(img)
                 pixel_map_x, pixel_map_y, pixel_map_z = cheetah_converter.calculate_pixel_map(psana_img)
 
-                pixel_map_cache[block_idx] = (pixel_map_x, pixel_map_y, pixel_map_z)
+                psana_pixel_map_x = cheetah_converter.convert_pixel_map_from_psana_to_cheetah(pixel_map_x)
+                psana_pixel_map_y = cheetah_converter.convert_pixel_map_from_psana_to_cheetah(pixel_map_y)
+                psana_pixel_map_z = cheetah_converter.convert_pixel_map_from_psana_to_cheetah(pixel_map_z)
+
+                pixel_map_cache[block_idx] = (psana_pixel_map_x, psana_pixel_map_y, psana_pixel_map_z)
 
             else:
                 pixel_map_cache[block_idx] = pixel_map_cache[block_idx - 1]    # Always refers to the previous pixel map
