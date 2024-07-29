@@ -189,7 +189,7 @@ class StreamManager:
         with h5py.File(path_cxi, 'r') as fh:
             psana_event_idx = fh.get(key_psana_event_idx)[idx_in_cxi][()]
 
-        return (exp, run, psana_event_idx)
+        return (exp, run, int(psana_event_idx))
 
 
     def cache_pixel_maps(self):
