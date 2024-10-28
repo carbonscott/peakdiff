@@ -18,7 +18,7 @@ from typing import Optional, Dict
 from scipy.spatial.distance import cdist
 from scipy.optimize         import linear_sum_assignment
 
-from crystfel_stream_parser.engine            import StreamParser
+from crystfel_stream_parser.ray_engine        import StreamParser
 from crystfel_stream_parser.cheetah_converter import CheetahConverter
 from crystfel_stream_parser.utils             import split_list_into_chunk
 
