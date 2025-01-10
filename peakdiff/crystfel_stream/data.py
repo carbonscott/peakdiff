@@ -202,7 +202,7 @@ class StreamManager:
                 img = self.get_img(block_idx)
 
                 cheetah_converter = CheetahConverter(block['GEOM_BLOCK'])
-                psana_img = cheetah_converter.convert_to_psana_img(img)
+                psana_img = cheetah_converter.convert_to_psana_img(img, reduces_geom=False)
                 pixel_map_x, pixel_map_y, pixel_map_z = cheetah_converter.calculate_pixel_map(psana_img)
 
                 psana_pixel_map_x = cheetah_converter.convert_pixel_map_from_psana_to_cheetah(pixel_map_x)
